@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 43 — Predicting Lifetime Value — Regression on Skewed, Heavy-Tailed Targets</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 43: Predicting Lifetime Value — Regression on Skewed, Heavy-Tailed Targets</h1>
+<p>
+    <span class="tag">Target Transformation</span>
+    <span class="tag">log1p</span>
+    <span class="tag">Box-Cox</span>
+    <span class="tag">Tweedie</span>
+    <span class="tag">Quantile Regression</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 9, 39, 19</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A subscription company wants to predict Customer Lifetime Value (CLV) — total revenue over 2 years</li>
+        <li>CLV distribution: 60% of customers spend $0–$100, 30% spend $100–$500, 10% spend $500–$10,000</li>
+        <li>Extreme right skew with heavy tail — a few "whale" customers dominate total revenue</li>
+        <li>Standard linear regression (Project 9) minimizes MSE — which is dominated by the whales</li>
+        <li>Goal → predict CLV accurately across the entire distribution, not just for extreme values</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 9: OLS minimizes MSE — heavily influenced by outliers in skewed targets</li>
+        <li>From Project 39: GLMs handle non-normal distributions — Tweedie handles zero-inflated continuous data</li>
+        <li>From Project 19: class imbalance concepts apply — here the "imbalance" is in the target distribution</li>
+        <li>Strategy 1: Transform the target (log1p, Box-Cox) → fit standard regression → inverse-transform predictions</li>
+        <li>Strategy 2: Use Tweedie regression (GLM) — naturally handles zero-inflated positive continuous data</li>
+        <li>Strategy 3: Quantile regression — predict the median or specific percentiles instead of the mean</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic CLV data with realistic skew and zero-inflation</li>
+        <li>Show why raw OLS fails (dominated by outliers, poor predictions for typical customers)</li>
+        <li>Apply log1p transformation and fit regression on transformed target</li>
+        <li>Apply Box-Cox transformation for optimal normalization</li>
+        <li>Fit Tweedie GLM for zero-inflated positive continuous data</li>
+        <li>Fit quantile regression for median and percentile predictions</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Visualize the target distribution FIRST — understand the skew before modeling</li>
+        <li>✅ Use log1p (not log) — handles zeros safely: log1p(0) = 0</li>
+        <li>✅ Evaluate with multiple metrics: RMSE, MAE, MAPE, and median absolute error</li>
+        <li>✅ Use Tweedie when the target has exact zeros mixed with positive continuous values</li>
+        <li>✅ Report predictions at different quantiles — business needs vary (median vs 90th percentile)</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use raw MSE as the only metric — it's dominated by extreme values</li>
+        <li>❌ Do NOT apply log to data with zeros — log(0) is undefined; use log1p instead</li>
+        <li>❌ Do NOT forget to inverse-transform predictions — predictions in log-space aren't in dollar-space</li>
+        <li>❌ Do NOT ignore the retransformation bias — E[exp(log_pred)] ≠ exp(E[log_pred])</li>
+        <li>❌ Do NOT clip negative predictions to zero without understanding why they occur</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>log1p transform</strong> → quick fix for right-skewed positive targets; simple and effective</li>
+        <li>🔹 <strong>Box-Cox</strong> → finds the optimal power transformation; requires strictly positive data</li>
+        <li>🔹 <strong>Tweedie GLM (Project 39)</strong> → zero-inflated positive continuous data; insurance claims, CLV</li>
+        <li>🔹 <strong>Quantile regression</strong> → when you need specific percentiles, not just the mean</li>
+        <li>🔹 <strong>Standard OLS (Project 9)</strong> → only when the target is approximately normal</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Box-Cox with zeros — it requires strictly positive data; use log1p or Tweedie instead</li>
+        <li>🚫 Quantile regression for mean prediction — it predicts quantiles, not the mean</li>
+        <li>🚫 Target transformation when the relationship is already linear in raw space</li>
+        <li>🚫 Tweedie when the target is truly normal — unnecessary complexity</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Why Skewed Targets Break OLS</h3>
+    <ul>
+        <li>MSE = mean of (y - ŷ)² — a $5,000 error contributes 2,500× more than a $100 error</li>
+        <li>OLS optimizes for the whales at the expense of typical customers</li>
+        <li>Residuals are heteroscedastic — variance increases with the predicted value</li>
+    </ul>
+
+    <h3>Log Transformation</h3>
+    <ul>
+        <li>log1p(y) compresses the scale: log1p(100)=4.6, log1p(10000)=9.2</li>
+        <li>Regression in log-space treats multiplicative errors equally</li>
+        <li>Inverse: expm1(ŷ_log) — but E[expm1(ŷ)] ≠ expm1(E[ŷ]) (Jensen's inequality)</li>
+        <li>Smearing correction: multiply by exp(σ²/2) to correct the bias</li>
+    </ul>
+
+    <h3>Tweedie Distribution</h3>
+    <ul>
+        <li>A family of distributions parameterized by power p</li>
+        <li>p=0: Normal, p=1: Poisson, p=2: Gamma, 1&lt;p&lt;2: compound Poisson-Gamma</li>
+        <li>For CLV: p ∈ (1,2) handles exact zeros + positive continuous values</li>
+        <li>Naturally models the zero-inflation without a separate zero model</li>
+    </ul>
+
+    <h3>Quantile Regression</h3>
+    <ul>
+        <li>Instead of minimizing MSE (mean), minimizes the pinball loss for a specific quantile τ</li>
+        <li>τ=0.5 → median regression (robust to outliers)</li>
+        <li>τ=0.9 → 90th percentile (upper bound estimate)</li>
+        <li>Different quantiles give different regression lines — the spread shows heteroscedasticity</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Retransformation bias</strong> — back-transforming log predictions without correction underestimates the mean</li>
+        <li>⚠️ <strong>Negative predictions</strong> — OLS on raw CLV can predict negative values; clip or use GLM</li>
+        <li>⚠️ <strong>Evaluating in wrong space</strong> — compute metrics in the original dollar space, not log space</li>
+        <li>⚠️ <strong>Ignoring zeros</strong> — many CLV datasets have exact zeros (churned customers); log(0) crashes</li>
+        <li>⚠️ <strong>Using RMSE alone</strong> — it's dominated by outliers; always include MAE and median AE</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Log transformation: O(n) — trivial overhead</li>
+        <li>Tweedie GLM: same as standard GLM — O(n × p²) per iteration</li>
+        <li>Quantile regression: slightly slower than OLS due to non-smooth loss function</li>
+        <li>For tree-based models: use LightGBM with Tweedie objective — handles millions of rows</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Log-space coefficients: "a 1-unit increase in X multiplies CLV by exp(β)"</li>
+        <li>✅ Quantile predictions are intuitive: "50% chance CLV exceeds $200, 10% chance it exceeds $800"</li>
+        <li>⚠️ Tweedie coefficients are on the log scale — same interpretation challenge as Poisson (Project 39)</li>
+        <li>⚠️ Multiple metrics can confuse stakeholders — pick the one that aligns with the business objective</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
+from scipy import stats as scipy_stats
+import statsmodels.api as sm
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate skewed CLV data ───
+n = 3000
+tenure_months = np.random.uniform(1, 24, n)
+monthly_spend = np.random.exponential(50, n)
+n_purchases = np.random.poisson(3, n)
+is_premium = np.random.binomial(1, 0.2, n)
+
+# CLV with realistic skew: many zeros/low, few very high
+base_clv = (tenure_months * monthly_spend * 0.1 + n_purchases * 20
+            + is_premium * 200 + np.random.exponential(30, n))
+# Add zeros (churned customers)
+churn_mask = np.random.binomial(1, 0.15, n).astype(bool)
+base_clv[churn_mask] = 0
+clv = np.maximum(base_clv, 0)
+
+df = pd.DataFrame({
+    'tenure': tenure_months, 'monthly_spend': monthly_spend,
+    'n_purchases': n_purchases, 'is_premium': is_premium, 'clv': clv
+})
+
+X = df[['tenure', 'monthly_spend', 'n_purchases', 'is_premium']].values
+y = df['clv'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("=== CLV Data ===")
+print(f"  Samples: {n}")
+print(f"  Mean CLV: ${y.mean():.0f}, Median: ${np.median(y):.0f}")
+print(f"  Skewness: {scipy_stats.skew(y):.2f}")
+print(f"  Zeros: {(y == 0).sum()} ({(y == 0).mean():.1%})")
+print(f"  Max CLV: ${y.max():.0f}")
+
+def evaluate(y_true, y_pred, name):
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    medae = median_absolute_error(y_true, y_pred)
+    mask = y_true > 0
+    mape = np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
+    print(f"  {name:<25}: RMSE=${rmse:.0f}, MAE=${mae:.0f}, MedAE=${medae:.0f}, MAPE={mape:.0f}%")
+    return {'name': name, 'rmse': rmse, 'mae': mae, 'medae': medae}
+
+# ─── Step 2: Raw OLS ───
+print(f"\n=== Model Comparison ===")
+ols = LinearRegression()
+ols.fit(X_train, y_train)
+ols_pred = ols.predict(X_test)
+evaluate(y_test, ols_pred, 'Raw OLS')
+print(f"    Negative predictions: {(ols_pred < 0).sum()}")
+
+# ─── Step 3: Log1p transformation ───
+y_train_log = np.log1p(y_train)
+ols_log = LinearRegression()
+ols_log.fit(X_train, y_train_log)
+log_pred_raw = ols_log.predict(X_test)
+log_pred = np.expm1(log_pred_raw)
+log_pred = np.maximum(log_pred, 0)
+evaluate(y_test, log_pred, 'OLS + log1p')
+
+# With smearing correction
+residuals_log = y_train_log - ols_log.predict(X_train)
+smear_factor = np.exp(np.var(residuals_log) / 2)
+log_pred_corrected = np.expm1(log_pred_raw) * smear_factor
+log_pred_corrected = np.maximum(log_pred_corrected, 0)
+evaluate(y_test, log_pred_corrected, 'OLS + log1p + smearing')
+
+# ─── Step 4: GBM on raw target ───
+gbm_raw = GradientBoostingRegressor(n_estimators=200, max_depth=5, random_state=42)
+gbm_raw.fit(X_train, y_train)
+gbm_pred = gbm_raw.predict(X_test)
+gbm_pred = np.maximum(gbm_pred, 0)
+evaluate(y_test, gbm_pred, 'GBM (raw target)')
+
+# ─── Step 5: GBM on log1p target ───
+gbm_log = GradientBoostingRegressor(n_estimators=200, max_depth=5, random_state=42)
+gbm_log.fit(X_train, y_train_log)
+gbm_log_pred = np.expm1(gbm_log.predict(X_test))
+gbm_log_pred = np.maximum(gbm_log_pred, 0)
+evaluate(y_test, gbm_log_pred, 'GBM (log1p target)')
+
+# ─── Step 6: Tweedie GLM ───
+X_train_sm = sm.add_constant(X_train)
+X_test_sm = sm.add_constant(X_test)
+# Tweedie with power=1.5 (compound Poisson-Gamma)
+tweedie = sm.GLM(y_train + 0.01, X_train_sm,
+                  family=sm.families.Tweedie(var_power=1.5, link=sm.families.links.Log()))
+tweedie_result = tweedie.fit()
+tweedie_pred = tweedie_result.predict(X_test_sm)
+evaluate(y_test, tweedie_pred, 'Tweedie GLM (p=1.5)')
+
+# ─── Step 7: Quantile regression (median) ───
+quant_50 = sm.QuantReg(y_train, X_train_sm).fit(q=0.5)
+quant_50_pred = quant_50.predict(X_test_sm)
+quant_50_pred = np.maximum(quant_50_pred, 0)
+evaluate(y_test, quant_50_pred, 'Quantile Reg (median)')
+
+# ─── Step 8: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Target distribution
+axes[0, 0].hist(y, bins=80, color='#58a6ff', alpha=0.7, edgecolor='white')
+axes[0, 0].axvline(np.mean(y), color='#f85149', linestyle='--', label=f'Mean: ${np.mean(y):.0f}')
+axes[0, 0].axvline(np.median(y), color='#3fb950', linestyle='--', label=f'Median: ${np.median(y):.0f}')
+axes[0, 0].set_xlabel('CLV ($)')
+axes[0, 0].set_ylabel('Count')
+axes[0, 0].set_title('CLV Distribution (Highly Skewed)')
+axes[0, 0].legend()
+axes[0, 0].grid(True, alpha=0.2)
+
+# Log-transformed distribution
+axes[0, 1].hist(np.log1p(y), bins=60, color='#3fb950', alpha=0.7, edgecolor='white')
+axes[0, 1].set_xlabel('log1p(CLV)')
+axes[0, 1].set_ylabel('Count')
+axes[0, 1].set_title('Log-Transformed CLV (More Normal)')
+axes[0, 1].grid(True, alpha=0.2)
+
+# Actual vs predicted comparison
+ax = axes[1, 0]
+ax.scatter(y_test, ols_pred, alpha=0.2, s=10, color='#f85149', label='Raw OLS')
+ax.scatter(y_test, gbm_log_pred, alpha=0.2, s=10, color='#3fb950', label='GBM+log1p')
+max_val = max(y_test.max(), gbm_log_pred.max())
+ax.plot([0, max_val], [0, max_val], '--', color='white', alpha=0.5)
+ax.set_xlabel('Actual CLV ($)')
+ax.set_ylabel('Predicted CLV ($)')
+ax.set_title('Actual vs Predicted')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Method comparison
+results = [
+    ('OLS', mean_absolute_error(y_test, ols_pred)),
+    ('OLS+log', mean_absolute_error(y_test, log_pred)),
+    ('GBM', mean_absolute_error(y_test, gbm_pred)),
+    ('GBM+log', mean_absolute_error(y_test, gbm_log_pred)),
+    ('Tweedie', mean_absolute_error(y_test, tweedie_pred)),
+    ('Quantile', mean_absolute_error(y_test, quant_50_pred)),
+]
+names, maes = zip(*results)
+colors = ['#f85149', '#f0883e', '#58a6ff', '#3fb950', '#bc8cff', '#c9d1d9']
+axes[1, 1].bar(names, maes, color=colors, alpha=0.8, edgecolor='white')
+axes[1, 1].set_ylabel('MAE ($)')
+axes[1, 1].set_title('Mean Absolute Error by Method')
+axes[1, 1].grid(True, alpha=0.2, axis='y')
+
+plt.tight_layout()
+plt.savefig('project_43_skewed_regression.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Skewed regression analysis saved as project_43_skewed_regression.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Skewed targets break standard regression — MSE is dominated by extreme values</li>
+        <li>log1p transformation is the simplest fix — but remember the retransformation bias</li>
+        <li>Tweedie GLM naturally handles zero-inflated positive continuous data</li>
+        <li>Quantile regression predicts specific percentiles — robust to outliers</li>
+        <li>Always evaluate with multiple metrics (RMSE, MAE, MedAE) — they tell different stories</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 44</h3>
+    <ul>
+        <li>We've handled skewed targets — now let's handle complex time series with trend changes</li>
+        <li>Project 44 introduces <strong>Facebook Prophet</strong> — automatic changepoint detection and holiday effects</li>
+        <li>This builds on the time series foundations from Projects 25, 26, and the hierarchical forecasting from Project 36</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_42.html">← Project 42: AutoML</a>
+    <a href="project_44.html">Project 44: Forecasting With Prophet →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

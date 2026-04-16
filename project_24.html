@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 24 — Reducing Dimensions in High-Dimensional Gene Data — PCA</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 24: Reducing Dimensions in High-Dimensional Gene Data — PCA</h1>
+<p>
+    <span class="tag">PCA</span>
+    <span class="tag">Explained Variance</span>
+    <span class="tag">Eigenvectors</span>
+    <span class="tag">Scree Plot</span>
+    <span class="tag">Dimensionality Reduction</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Projects 13, 14</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a bioinformatics researcher analyzing gene expression data to classify tumor types</li>
+        <li>Dataset: 200 patient samples, each with 5,000 gene expression measurements</li>
+        <li>Problem: 5,000 features but only 200 samples — models overfit instantly (curse of dimensionality)</li>
+        <li>Many genes are correlated — groups of genes activate together</li>
+        <li>Goal → reduce 5,000 dimensions to a manageable number while preserving the important patterns</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 13: features must be scaled before distance-based or variance-based methods</li>
+        <li>PCA finds the directions (principal components) along which the data varies most</li>
+        <li>The first few components capture most of the variance — the rest is noise</li>
+        <li>Use the scree plot (explained variance) to decide how many components to keep</li>
+        <li>Feed the reduced data into a classifier and compare with the original high-dimensional data</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate high-dimensional gene expression data with underlying structure</li>
+        <li>Apply PCA and examine explained variance ratios</li>
+        <li>Plot the scree plot — find the "elbow" where adding components gives diminishing returns</li>
+        <li>Visualize data in 2D using the first two principal components</li>
+        <li>Compare classifier performance: original features vs PCA-reduced features</li>
+        <li>Show how PCA helps when p >> n (more features than samples)</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Scale features before PCA — PCA is based on variance, so features must be on the same scale (Project 13)</li>
+        <li>✅ Use the scree plot to choose the number of components — look for the elbow</li>
+        <li>✅ Check cumulative explained variance — aim for 90-95% of total variance</li>
+        <li>✅ Fit PCA on training data only, then transform both train and test</li>
+        <li>✅ Use PCA as a preprocessing step in a Pipeline</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT apply PCA without scaling — features with larger variance dominate the components</li>
+        <li>❌ Do NOT fit PCA on the entire dataset (train + test) — that's data leakage</li>
+        <li>❌ Do NOT always use PCA — tree-based models (Projects 21, 23) handle high dimensions natively</li>
+        <li>❌ Do NOT interpret principal components as original features — they're linear combinations</li>
+        <li>❌ Do NOT use PCA to reduce from 10 to 8 features — the overhead isn't worth it; PCA shines with massive reduction</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>PCA</strong> → when you have many correlated features and want to reduce dimensions</li>
+        <li>🔹 <strong>Lasso</strong> → when you want to select original features, not create new ones (Project 18)</li>
+        <li>🔹 <strong>K-Means on PCA</strong> → reduce dimensions first, then cluster (Project 14)</li>
+        <li>🔹 <strong>PCA + Logistic Regression</strong> → when p >> n and you need a simple classifier</li>
+        <li>🔹 <strong>No PCA</strong> → when using tree-based models that handle high dimensions well</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When feature interpretability is critical — PCA components are abstract combinations</li>
+        <li>🚫 With tree-based models — they don't benefit from PCA and may perform worse</li>
+        <li>🚫 When features are already uncorrelated — PCA can't compress uncorrelated features</li>
+        <li>🚫 When the important signal is in low-variance directions — PCA might discard it</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>What PCA Does — Step by Step</h3>
+    <ul>
+        <li>Step 1: Center the data (subtract the mean of each feature)</li>
+        <li>Step 2: Compute the covariance matrix (p × p)</li>
+        <li>Step 3: Find eigenvectors and eigenvalues of the covariance matrix</li>
+        <li>Step 4: Sort eigenvectors by eigenvalue (largest first)</li>
+        <li>Step 5: Project data onto the top-k eigenvectors → k-dimensional representation</li>
+    </ul>
+
+    <h3>Eigenvectors and Eigenvalues — Intuition</h3>
+    <ul>
+        <li>Each eigenvector is a direction in feature space</li>
+        <li>The corresponding eigenvalue tells you how much variance lies along that direction</li>
+        <li>The first eigenvector points in the direction of maximum variance</li>
+        <li>The second eigenvector is perpendicular to the first and captures the next most variance</li>
+        <li>Each component is uncorrelated with all others — PCA decorrelates the data</li>
+    </ul>
+
+    <h3>Explained Variance Ratio</h3>
+    <ul>
+        <li><code>explained_variance_ratio_[i] = eigenvalue_i / sum(all eigenvalues)</code></li>
+        <li>Tells you what fraction of total variance each component captures</li>
+        <li>Cumulative sum tells you how much variance is retained with k components</li>
+        <li>If 3 components capture 95% of variance, the other 4,997 features are mostly noise</li>
+    </ul>
+
+    <h3>The Scree Plot</h3>
+    <ul>
+        <li>Plot explained variance ratio vs component number</li>
+        <li>Look for the "elbow" — where the curve flattens</li>
+        <li>Components after the elbow contribute little — safe to discard</li>
+        <li>Similar to the elbow method in K-Means (Project 14) — same intuition</li>
+    </ul>
+
+    <h3>PCA vs Feature Selection</h3>
+    <ul>
+        <li>PCA creates NEW features (linear combinations of originals) — dimensionality reduction</li>
+        <li>Lasso (Project 18) selects EXISTING features — feature selection</li>
+        <li>PCA is unsupervised — doesn't use the target variable</li>
+        <li>Lasso is supervised — selects features that predict the target</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Not scaling before PCA</strong> — a feature measured in thousands dominates one measured in decimals</li>
+        <li>⚠️ <strong>Keeping too few components</strong> — losing important signal; check explained variance</li>
+        <li>⚠️ <strong>Keeping too many components</strong> — defeats the purpose; you're not reducing enough</li>
+        <li>⚠️ <strong>Fitting PCA on test data</strong> — fit on train, transform both (same as scaling in Project 13)</li>
+        <li>⚠️ <strong>Using PCA with tree-based models</strong> — trees handle high dimensions natively; PCA may hurt</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Full PCA: O(min(n²p, np²)) — expensive when both n and p are large</li>
+        <li>For very large datasets, use IncrementalPCA (processes data in batches)</li>
+        <li>For very high p, use TruncatedSVD (doesn't need to center data, works on sparse matrices)</li>
+        <li>randomized PCA (svd_solver='randomized') is much faster for large p with few components</li>
+        <li>PCA reduces downstream model training time — fewer features = faster training</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Explained variance ratio is intuitive: "3 components capture 92% of the information"</li>
+        <li>✅ 2D PCA plots are excellent for visualization and presentations</li>
+        <li>⚠️ Components are abstract — "PC1 = 0.3×gene_A + 0.2×gene_B - 0.1×gene_C" is hard to explain</li>
+        <li>⚠️ You can inspect components_ to see which original features load heavily on each component</li>
+        <li>⚠️ PCA is unsupervised — the components that explain variance may not be the ones that predict the target</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: High-dimensional gene expression data ───
+np.random.seed(42)
+n_samples = 200
+n_features = 500  # simulating high-dimensional gene data
+n_informative = 20
+
+X, y = make_classification(n_samples=n_samples, n_features=n_features,
+                           n_informative=n_informative, n_redundant=30,
+                           n_clusters_per_class=2, flip_y=0.05,
+                           random_state=42)
+
+print(f"=== Gene Expression Dataset ===")
+print(f"  Samples: {n_samples}, Features: {n_features}")
+print(f"  Informative: {n_informative}, Redundant: 30, Noise: {n_features - n_informative - 30}")
+print(f"  Class balance: {np.mean(y):.1%} positive")
+print(f"  Problem: p ({n_features}) >> n ({n_samples}) — curse of dimensionality")
+
+# ─── Step 2: PCA — explained variance analysis ───
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+pca_full = PCA().fit(X_scaled)
+cumulative_var = np.cumsum(pca_full.explained_variance_ratio_)
+
+print(f"\n=== Explained Variance ===")
+for n_comp in [1, 2, 5, 10, 20, 50, 100]:
+    print(f"  {n_comp:>3} components: {cumulative_var[n_comp-1]:.1%} variance explained")
+
+# Find 90% and 95% thresholds
+n_90 = np.argmax(cumulative_var >= 0.90) + 1
+n_95 = np.argmax(cumulative_var >= 0.95) + 1
+print(f"\n  Components for 90% variance: {n_90}")
+print(f"  Components for 95% variance: {n_95}")
+
+# ─── Step 3: Scree plot ───
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+# Individual explained variance
+axes[0].bar(range(1, 51), pca_full.explained_variance_ratio_[:50], color='#58a6ff', alpha=0.7)
+axes[0].set_xlabel('Principal Component')
+axes[0].set_ylabel('Explained Variance Ratio')
+axes[0].set_title('Scree Plot (first 50 components)')
+axes[0].grid(True, alpha=0.2, axis='y')
+
+# Cumulative explained variance
+axes[1].plot(range(1, n_features + 1), cumulative_var, color='#f0883e', linewidth=2)
+axes[1].axhline(y=0.90, color='#3fb950', linestyle='--', label='90% variance')
+axes[1].axhline(y=0.95, color='#f85149', linestyle='--', label='95% variance')
+axes[1].axvline(x=n_90, color='#3fb950', linestyle=':', alpha=0.5)
+axes[1].axvline(x=n_95, color='#f85149', linestyle=':', alpha=0.5)
+axes[1].set_xlabel('Number of Components')
+axes[1].set_ylabel('Cumulative Explained Variance')
+axes[1].set_title('Cumulative Variance')
+axes[1].legend()
+axes[1].grid(True, alpha=0.2)
+
+# 2D PCA visualization
+pca_2d = PCA(n_components=2).fit_transform(X_scaled)
+scatter = axes[2].scatter(pca_2d[:, 0], pca_2d[:, 1], c=y, cmap='coolwarm',
+                           alpha=0.6, s=30, edgecolors='none')
+axes[2].set_xlabel(f'PC1 ({pca_full.explained_variance_ratio_[0]:.1%} variance)')
+axes[2].set_ylabel(f'PC2 ({pca_full.explained_variance_ratio_[1]:.1%} variance)')
+axes[2].set_title('2D PCA Projection')
+plt.colorbar(scatter, ax=axes[2], label='Class')
+axes[2].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_24_pca_analysis.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ PCA analysis saved as project_24_pca_analysis.png")
+
+# ─── Step 4: Before/after PCA — classifier comparison ───
+print(f"\n=== Classifier Performance: Original vs PCA-Reduced ===")
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+configs = [
+    ('LogReg — All 500 features', Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', LogisticRegression(max_iter=5000, random_state=42))
+    ])),
+    ('LogReg — PCA (20 comp)', Pipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=20)),
+        ('clf', LogisticRegression(max_iter=5000, random_state=42))
+    ])),
+    ('LogReg — PCA (50 comp)', Pipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=50)),
+        ('clf', LogisticRegression(max_iter=5000, random_state=42))
+    ])),
+    ('LogReg — PCA (95% var)', Pipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=0.95)),
+        ('clf', LogisticRegression(max_iter=5000, random_state=42))
+    ])),
+    ('RandomForest — All 500', Pipeline([
+        ('clf', RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1))
+    ])),
+    ('RandomForest — PCA (50)', Pipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=50)),
+        ('clf', RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1))
+    ])),
+]
+
+for name, pipe in configs:
+    scores = cross_val_score(pipe, X, y, cv=cv, scoring='f1')
+    print(f"  {name:>30}: F1 = {scores.mean():.4f} ± {scores.std():.4f}")
+
+# ─── Step 5: Component loadings — what do PCs mean? ───
+pca_10 = PCA(n_components=10).fit(X_scaled)
+
+print(f"\n=== Top Feature Loadings for PC1 and PC2 ===")
+for pc_idx in [0, 1]:
+    loadings = np.abs(pca_10.components_[pc_idx])
+    top_features = np.argsort(loadings)[::-1][:5]
+    print(f"  PC{pc_idx+1} top features: {top_features.tolist()}")
+    print(f"    Loadings: {[f'{loadings[i]:.3f}' for i in top_features]}")
+
+# ─── Step 6: Optimal number of components via CV ───
+print(f"\n=== Finding Optimal n_components via CV ===")
+n_components_range = [2, 5, 10, 20, 30, 50, 75, 100, 150]
+cv_scores = []
+
+for n_comp in n_components_range:
+    pipe = Pipeline([
+        ('scaler', StandardScaler()),
+        ('pca', PCA(n_components=n_comp)),
+        ('clf', LogisticRegression(max_iter=5000, random_state=42))
+    ])
+    scores = cross_val_score(pipe, X, y, cv=cv, scoring='f1')
+    cv_scores.append(scores.mean())
+    print(f"  n_components={n_comp:>3}: F1 = {scores.mean():.4f}")
+
+best_n = n_components_range[np.argmax(cv_scores)]
+print(f"\n  → Best n_components: {best_n} (F1 = {max(cv_scores):.4f})")
+
+# ─── Step 7: Plot optimal components ───
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(n_components_range, cv_scores, 'o-', color='#58a6ff', linewidth=2)
+ax.axvline(x=best_n, color='#3fb950', linestyle='--', label=f'Best: {best_n} components')
+ax.set_xlabel('Number of PCA Components')
+ax.set_ylabel('CV F1 Score')
+ax.set_title('Optimal Number of PCA Components')
+ax.legend()
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_24_optimal_components.png', dpi=100, bbox_inches='tight')
+print(f"✅ Optimal components plot saved as project_24_optimal_components.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>PCA finds the directions of maximum variance and projects data onto them</li>
+        <li>The scree plot and cumulative variance help choose how many components to keep</li>
+        <li>Always scale before PCA — it's variance-based (Project 13)</li>
+        <li>PCA creates new abstract features — not the same as feature selection (Lasso, Project 18)</li>
+        <li>PCA helps most when p >> n (many features, few samples) — reduces overfitting</li>
+        <li>Tree-based models (Projects 21, 23) often don't benefit from PCA — they handle high dimensions natively</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 25</h3>
+    <ul>
+        <li>All our models so far treat each sample as independent — no notion of time ordering</li>
+        <li>Project 25 introduces <strong>time series decomposition</strong> — breaking a series into trend, seasonality, and residuals</li>
+        <li>When data has a time dimension, the order matters — tomorrow's sales depend on today's</li>
+        <li>We'll learn to identify and separate these temporal patterns before modeling</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_23.html">← Project 23: Gradient Boosting</a>
+    <a href="project_25.html">Project 25: Time Series Decomposition →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

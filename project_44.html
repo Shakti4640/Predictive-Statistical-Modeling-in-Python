@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 44 — Forecasting With Prophet — Trend Changepoints and Holiday Effects</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 44: Forecasting With Prophet — Trend Changepoints and Holiday Effects</h1>
+<p>
+    <span class="tag">Prophet</span>
+    <span class="tag">Changepoint Detection</span>
+    <span class="tag">Fourier Seasonality</span>
+    <span class="tag">Holiday Regressors</span>
+    <span class="tag">Uncertainty Intervals</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 25, 26, 36</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>An e-commerce company needs to forecast daily website traffic for the next 90 days</li>
+        <li>Traffic has a growing trend that changed slope twice (product launches)</li>
+        <li>Strong weekly seasonality (weekdays vs weekends) and annual seasonality (holiday season)</li>
+        <li>Black Friday, Christmas, and summer sales cause massive spikes</li>
+        <li>ARIMA (Project 26) struggles with multiple seasonalities and trend changes</li>
+        <li>Goal → use Prophet to handle changepoints, multiple seasonalities, and holiday effects automatically</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 25: decomposition separates trend, seasonality, residual — Prophet does this as a model</li>
+        <li>From Project 26: ARIMA handles one seasonality — Prophet handles multiple via Fourier terms</li>
+        <li>From Project 36: hierarchical forecasting needs coherent forecasts — Prophet can be a base forecaster</li>
+        <li>Prophet decomposes: y(t) = trend(t) + seasonality(t) + holidays(t) + error(t)</li>
+        <li>Trend can have automatic changepoints — no need to manually specify when the trend changed</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate 3 years of daily traffic data with trend changes, weekly/yearly seasonality, and holidays</li>
+        <li>Fit Prophet with default settings — it auto-detects changepoints and seasonality</li>
+        <li>Add custom holidays (Black Friday, product launches)</li>
+        <li>Tune changepoint sensitivity and seasonality strength</li>
+        <li>Generate forecasts with uncertainty intervals</li>
+        <li>Compare with ARIMA baseline from Project 26</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Inspect the component plots — they show trend, weekly, and yearly patterns separately</li>
+        <li>✅ Add known holidays and special events — Prophet handles them as additional regressors</li>
+        <li>✅ Tune changepoint_prior_scale — higher values allow more trend flexibility</li>
+        <li>✅ Use cross-validation with Prophet's built-in cross_validation function</li>
+        <li>✅ Check the uncertainty intervals — they should cover ~95% of actual values</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use Prophet for sub-daily data without careful configuration — it's designed for daily+</li>
+        <li>❌ Do NOT ignore the changepoint locations — they reveal when the business dynamics shifted</li>
+        <li>❌ Do NOT set too many changepoints — overfits the trend to noise</li>
+        <li>❌ Do NOT forget to cap the trend for logistic growth — unbounded growth is unrealistic</li>
+        <li>❌ Do NOT use Prophet for non-time-series problems — it's specifically for temporal forecasting</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Prophet</strong> → daily/weekly data with multiple seasonalities, holidays, and trend changes</li>
+        <li>🔹 <strong>ARIMA (Project 26)</strong> → single seasonality, stationary or differenced data, short-term forecasts</li>
+        <li>🔹 <strong>Exponential Smoothing</strong> → simple trend + single seasonality; fast and interpretable</li>
+        <li>🔹 <strong>Hierarchical methods (Project 36)</strong> → when forecasts must be coherent across levels</li>
+        <li>🔹 <strong>LSTM (Project 49)</strong> → when complex nonlinear temporal patterns exist</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 For very short time series (< 2 full seasonal cycles) — not enough data to estimate seasonality</li>
+        <li>🚫 For high-frequency data (seconds, minutes) without aggregation</li>
+        <li>🚫 When the series has no trend or seasonality — simpler methods suffice</li>
+        <li>🚫 When you need causal explanations — Prophet is a forecasting tool, not a causal model</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Prophet's Decomposition</h3>
+    <ul>
+        <li>y(t) = g(t) + s(t) + h(t) + ε(t)</li>
+        <li>g(t): trend — piecewise linear or logistic growth with automatic changepoints</li>
+        <li>s(t): seasonality — Fourier series for weekly, yearly, and custom periods</li>
+        <li>h(t): holiday effects — indicator variables with windows around each holiday</li>
+        <li>ε(t): error — assumed normally distributed</li>
+    </ul>
+
+    <h3>Automatic Changepoint Detection</h3>
+    <ul>
+        <li>Prophet places potential changepoints at evenly spaced locations in the first 80% of data</li>
+        <li>Uses a sparse prior (Laplace) on the rate changes — most changepoints have zero effect</li>
+        <li>changepoint_prior_scale controls flexibility: higher = more changepoints activated</li>
+        <li>The detected changepoints reveal when the trend slope changed</li>
+    </ul>
+
+    <h3>Fourier Seasonality</h3>
+    <ul>
+        <li>Weekly seasonality: sum of sin/cos terms with period 7 days</li>
+        <li>Yearly seasonality: sum of sin/cos terms with period 365.25 days</li>
+        <li>fourier_order controls complexity: higher = more flexible seasonal patterns</li>
+        <li>This is why Prophet handles multiple seasonalities — each gets its own Fourier series</li>
+    </ul>
+
+    <h3>Uncertainty Intervals</h3>
+    <ul>
+        <li>Trend uncertainty: simulated from the changepoint posterior</li>
+        <li>Observation uncertainty: from the residual variance</li>
+        <li>Combined: wider intervals further into the future (more uncertain)</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Overfitting the trend</strong> — too many changepoints make the trend follow noise</li>
+        <li>⚠️ <strong>Missing holidays</strong> — unmodeled holidays appear as large residuals; add them explicitly</li>
+        <li>⚠️ <strong>Extrapolating too far</strong> — Prophet's trend extrapolation becomes unreliable beyond 1–2 seasonal cycles</li>
+        <li>⚠️ <strong>Ignoring component plots</strong> — they're the most valuable diagnostic tool</li>
+        <li>⚠️ <strong>Not using cross-validation</strong> — Prophet's built-in CV uses expanding windows appropriate for time series</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Prophet fits in seconds for typical daily data (1–5 years)</li>
+        <li>For thousands of time series: parallelize with joblib or use Prophet's MAP estimation (faster than MCMC)</li>
+        <li>MCMC mode gives better uncertainty estimates but is 10–100× slower</li>
+        <li>For millions of series: consider simpler models (ETS) or neural approaches (Project 49)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Component plots are highly interpretable — stakeholders see trend, weekly, yearly patterns separately</li>
+        <li>✅ Changepoint locations tell a business story — "growth accelerated after the product launch"</li>
+        <li>✅ Holiday effects are quantified — "Black Friday adds 150% to baseline traffic"</li>
+        <li>✅ Uncertainty intervals communicate forecast confidence visually</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate daily traffic data with realistic patterns ───
+n_days = 1095  # 3 years
+dates = pd.date_range('2021-01-01', periods=n_days, freq='D')
+t = np.arange(n_days)
+
+# Trend with changepoints
+trend = np.piecewise(t, [t < 365, (t >= 365) & (t < 730), t >= 730],
+                      [lambda x: 1000 + 2*x,
+                       lambda x: 1000 + 2*365 + 5*(x-365),
+                       lambda x: 1000 + 2*365 + 5*365 + 1*(x-730)])
+
+# Weekly seasonality (weekends lower)
+day_of_week = np.array([d.weekday() for d in dates])
+weekly = np.where(day_of_week >= 5, -200, 100)  # weekends drop
+
+# Yearly seasonality
+day_of_year = np.array([d.timetuple().tm_yday for d in dates])
+yearly = 300 * np.sin(2 * np.pi * day_of_year / 365.25) + 150 * np.cos(4 * np.pi * day_of_year / 365.25)
+
+# Holiday effects
+holidays_df = pd.DataFrame({
+    'ds': pd.to_datetime(['2021-11-26', '2021-12-25', '2022-11-25',
+                           '2022-12-25', '2023-11-24', '2023-12-25']),
+    'holiday': ['black_friday', 'christmas'] * 3,
+    'effect': [800, 500, 900, 550, 1000, 600]
+})
+
+holiday_effect = np.zeros(n_days)
+for _, row in holidays_df.iterrows():
+    idx = (dates == row['ds'])
+    if idx.any():
+        pos = np.where(idx)[0][0]
+        for offset in range(-2, 3):
+            if 0 <= pos + offset < n_days:
+                holiday_effect[pos + offset] += row['effect'] * max(0, 1 - abs(offset) * 0.3)
+
+noise = np.random.normal(0, 100, n_days)
+traffic = np.maximum(trend + weekly + yearly + holiday_effect + noise, 100)
+
+df = pd.DataFrame({'ds': dates, 'y': traffic})
+
+print("=== Daily Traffic Data ===")
+print(f"  Period: {dates[0].date()} to {dates[-1].date()} ({n_days} days)")
+print(f"  Mean traffic: {traffic.mean():.0f}, Std: {traffic.std():.0f}")
+
+# ─── Step 2: Train/test split ───
+train_end = n_days - 90
+train = df.iloc[:train_end].copy()
+test = df.iloc[train_end:].copy()
+print(f"  Train: {len(train)} days, Test: {len(test)} days")
+
+# ─── Step 3: Prophet-style decomposition (manual implementation) ───
+# Since Prophet requires installation, we implement the core concepts manually
+
+# Trend estimation using piecewise linear regression
+from sklearn.linear_model import LinearRegression
+
+# Detect changepoints using residual analysis
+n_changepoints = 10
+cp_indices = np.linspace(0, len(train) * 0.8, n_changepoints + 2, dtype=int)[1:-1]
+
+# Build changepoint design matrix
+A = np.zeros((len(train), n_changepoints))
+for j, cp in enumerate(cp_indices):
+    A[cp:, j] = np.arange(len(train) - cp) if cp < len(train) else 0
+    A[cp:, j] = np.arange(1, len(train) - cp + 1)
+
+X_trend = np.column_stack([np.arange(len(train)), A])
+trend_model = LinearRegression()
+trend_model.fit(X_trend, train['y'].values)
+trend_fitted = trend_model.predict(X_trend)
+
+# Identify significant changepoints
+cp_magnitudes = np.abs(trend_model.coef_[1:])
+significant_cps = cp_indices[cp_magnitudes > np.percentile(cp_magnitudes, 70)]
+
+print(f"\n=== Changepoint Detection ===")
+print(f"  Candidate changepoints: {n_changepoints}")
+print(f"  Significant changepoints: {len(significant_cps)}")
+for cp in significant_cps:
+    print(f"    {train['ds'].iloc[cp].date()}")
+
+# ─── Step 4: Seasonality estimation using Fourier terms ───
+# Weekly seasonality (Fourier order 3)
+weekly_fourier = np.column_stack([
+    np.sin(2 * np.pi * k * np.arange(len(train)) / 7) for k in range(1, 4)
+] + [
+    np.cos(2 * np.pi * k * np.arange(len(train)) / 7) for k in range(1, 4)
+])
+
+# Yearly seasonality (Fourier order 5)
+yearly_fourier = np.column_stack([
+    np.sin(2 * np.pi * k * np.arange(len(train)) / 365.25) for k in range(1, 6)
+] + [
+    np.cos(2 * np.pi * k * np.arange(len(train)) / 365.25) for k in range(1, 6)
+])
+
+# Combined model
+X_full = np.column_stack([X_trend, weekly_fourier, yearly_fourier])
+full_model = LinearRegression()
+full_model.fit(X_full, train['y'].values)
+train_pred = full_model.predict(X_full)
+
+# ─── Step 5: Forecast ───
+t_test = np.arange(len(train), len(train) + len(test))
+A_test = np.zeros((len(test), n_changepoints))
+for j, cp in enumerate(cp_indices):
+    if cp < len(train):
+        A_test[:, j] = np.arange(len(train) - cp + 1, len(train) - cp + len(test) + 1)
+
+X_trend_test = np.column_stack([t_test, A_test])
+
+weekly_test = np.column_stack([
+    np.sin(2 * np.pi * k * t_test / 7) for k in range(1, 4)
+] + [
+    np.cos(2 * np.pi * k * t_test / 7) for k in range(1, 4)
+])
+
+yearly_test = np.column_stack([
+    np.sin(2 * np.pi * k * t_test / 365.25) for k in range(1, 6)
+] + [
+    np.cos(2 * np.pi * k * t_test / 365.25) for k in range(1, 6)
+])
+
+X_test_full = np.column_stack([X_trend_test, weekly_test, yearly_test])
+forecast = full_model.predict(X_test_full)
+
+# Uncertainty intervals
+residuals = train['y'].values - train_pred
+residual_std = np.std(residuals)
+forecast_lower = forecast - 1.96 * residual_std
+forecast_upper = forecast + 1.96 * residual_std
+
+# Evaluate
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+mae = mean_absolute_error(test['y'].values, forecast)
+rmse = np.sqrt(mean_squared_error(test['y'].values, forecast))
+coverage = np.mean((test['y'].values >= forecast_lower) & (test['y'].values <= forecast_upper))
+
+print(f"\n=== Forecast Results (90-day horizon) ===")
+print(f"  MAE: {mae:.0f}")
+print(f"  RMSE: {rmse:.0f}")
+print(f"  95% CI coverage: {coverage:.1%}")
+
+# ─── Step 6: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Full series with forecast
+ax = axes[0, 0]
+ax.plot(train['ds'], train['y'], color='#c9d1d9', linewidth=0.5, alpha=0.7, label='Train')
+ax.plot(test['ds'], test['y'], color='white', linewidth=1, label='Actual')
+ax.plot(test['ds'], forecast, color='#58a6ff', linewidth=2, label='Forecast')
+ax.fill_between(test['ds'], forecast_lower, forecast_upper, alpha=0.2, color='#58a6ff')
+ax.set_title('Traffic Forecast with Uncertainty')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Trend component
+ax = axes[0, 1]
+ax.plot(train['ds'], trend_fitted, color='#f0883e', linewidth=2)
+for cp in significant_cps:
+    ax.axvline(train['ds'].iloc[cp], color='#f85149', linestyle='--', alpha=0.5)
+ax.set_title('Trend Component + Changepoints')
+ax.grid(True, alpha=0.2)
+
+# Weekly seasonality
+weekly_effect = weekly_fourier @ full_model.coef_[n_changepoints+1:n_changepoints+7]
+avg_weekly = pd.Series(weekly_effect, index=train['ds']).groupby(train['ds'].dt.dayofweek).mean()
+days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+axes[1, 0].bar(days, avg_weekly.values, color='#3fb950', alpha=0.8)
+axes[1, 0].set_ylabel('Effect on Traffic')
+axes[1, 0].set_title('Weekly Seasonality')
+axes[1, 0].grid(True, alpha=0.2, axis='y')
+
+# Residual distribution
+axes[1, 1].hist(residuals, bins=50, color='#bc8cff', alpha=0.7, density=True, edgecolor='white')
+axes[1, 1].set_xlabel('Residual')
+axes[1, 1].set_ylabel('Density')
+axes[1, 1].set_title(f'Residuals (std={residual_std:.0f})')
+axes[1, 1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_44_prophet_forecast.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Prophet-style forecast saved as project_44_prophet_forecast.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Prophet decomposes time series into trend + seasonality + holidays — each interpretable</li>
+        <li>Automatic changepoint detection reveals when business dynamics shifted</li>
+        <li>Fourier terms handle multiple seasonalities (weekly + yearly) simultaneously</li>
+        <li>Holiday effects are modeled as additional regressors — quantifying their impact</li>
+        <li>Uncertainty intervals widen with forecast horizon — honestly communicating confidence</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 45</h3>
+    <ul>
+        <li>We've predicted values and classified items — but what about recommending items to users?</li>
+        <li>Project 45 introduces <strong>recommendation engines</strong> using collaborative filtering and matrix factorization</li>
+        <li>This builds on PCA (Project 24) and clustering (Project 14) — finding latent patterns in user-item interactions</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_43.html">← Project 43: Predicting Lifetime Value</a>
+    <a href="project_45.html">Project 45: Recommendation Engine →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

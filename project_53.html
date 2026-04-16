@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 53 — Counterfactual Explanations — Why Was My Loan Rejected?</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 53: Counterfactual Explanations — Why Was My Loan Rejected?</h1>
+<p>
+    <span class="tag">Counterfactual Explanations</span>
+    <span class="tag">DiCE</span>
+    <span class="tag">Algorithmic Recourse</span>
+    <span class="tag">Actionable Features</span>
+    <span class="tag">Proximity Constraint</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 27, 37</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A bank uses a gradient boosting model to approve or reject loan applications</li>
+        <li>A customer's application was rejected — they ask: "Why? And what can I change to get approved?"</li>
+        <li>SHAP values (Project 27) explain which features contributed to the rejection — but don't tell the customer what to DO</li>
+        <li>Causal inference (Project 37) identifies what causes outcomes — counterfactuals ask "what WOULD have happened if..."</li>
+        <li>Goal → generate counterfactual explanations: the smallest realistic changes to the application that would flip the decision to "approved"</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 27: SHAP tells us "income contributed -0.3 to your score" — informative but not actionable</li>
+        <li>From Project 37: causal thinking distinguishes correlation from causation — counterfactuals need causal reasoning</li>
+        <li>A counterfactual is a nearby data point where the model's decision flips: "If your income were $55K instead of $42K, you'd be approved"</li>
+        <li>Key constraints: changes must be (a) minimal, (b) actionable (can't change age or race), (c) realistic (income can't jump from $30K to $300K)</li>
+        <li>Generate DIVERSE counterfactuals — multiple paths to approval give the customer options</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Train a loan approval classifier on synthetic data</li>
+        <li>Identify a rejected applicant and generate counterfactual explanations</li>
+        <li>Implement a simple counterfactual search: perturb features, check if the decision flips, minimize the perturbation</li>
+        <li>Add actionability constraints — some features are immutable (age, race), others are actionable (income, debt)</li>
+        <li>Generate multiple diverse counterfactuals — different paths to the same outcome</li>
+        <li>Compare with SHAP explanations to show the difference between "why" and "what to change"</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Distinguish immutable features (age, race, gender) from actionable ones (income, debt, credit score)</li>
+        <li>✅ Generate DIVERSE counterfactuals — "increase income by $10K" OR "reduce debt by $5K" gives the customer options</li>
+        <li>✅ Enforce proximity — the counterfactual should be close to the original; small changes are more actionable</li>
+        <li>✅ Check plausibility — a counterfactual suggesting income of $500K for a junior employee is useless</li>
+        <li>✅ Present counterfactuals in natural language — "If you reduced your debt-to-income ratio from 0.45 to 0.35..."</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT suggest changes to immutable features — "be 10 years younger" is not actionable</li>
+        <li>❌ Do NOT generate unrealistic counterfactuals — they must lie within the data distribution</li>
+        <li>❌ Do NOT provide only one counterfactual — diversity gives the user meaningful choices</li>
+        <li>❌ Do NOT confuse counterfactuals with feature importance — SHAP says "what mattered"; counterfactuals say "what to change"</li>
+        <li>❌ Do NOT ignore causal relationships between features — increasing income might also change debt-to-income ratio</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Counterfactual explanations</strong> → when users need actionable recourse ("what can I change?")</li>
+        <li>🔹 <strong>SHAP values (Project 27)</strong> → when you need to understand feature contributions ("why this decision?")</li>
+        <li>🔹 <strong>LIME</strong> → when you need a local linear approximation of the decision boundary</li>
+        <li>🔹 <strong>Causal inference (Project 37)</strong> → when you need to know if changing X actually causes a change in Y</li>
+        <li>🔹 <strong>DiCE library</strong> → production-ready counterfactual generation with diversity and feasibility constraints</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When the model is a simple rule-based system — just show the rules directly</li>
+        <li>🚫 When there's no actionable recourse possible — some decisions can't be changed by the applicant</li>
+        <li>🚫 When the model changes frequently — counterfactuals from yesterday's model may not apply today</li>
+        <li>🚫 When you need global explanations — counterfactuals are inherently local (per-instance)</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>What is a Counterfactual?</h3>
+    <ul>
+        <li>Given input x with prediction f(x) = "rejected", find x' such that f(x') = "approved"</li>
+        <li>x' should be as close to x as possible — minimize ||x - x'||</li>
+        <li>x' should be realistic — it should look like a real data point</li>
+        <li>Multiple x' values provide diverse options for the user</li>
+    </ul>
+
+    <h3>Optimization Objective</h3>
+    <ul>
+        <li>minimize: distance(x, x') + λ₁ × validity_loss(x') + λ₂ × diversity_loss(x')</li>
+        <li>distance: how far x' is from x (L1 or L2 norm, weighted by feature importance)</li>
+        <li>validity_loss: penalty if f(x') doesn't flip to the desired class</li>
+        <li>diversity_loss: penalty if multiple counterfactuals are too similar to each other</li>
+    </ul>
+
+    <h3>Actionability Constraints</h3>
+    <ul>
+        <li>Immutable: feature cannot change (age, race) → x'_i = x_i</li>
+        <li>Increasing only: feature can only go up (education level) → x'_i ≥ x_i</li>
+        <li>Range-bounded: feature must stay within realistic bounds → x'_i ∈ [min, max]</li>
+        <li>Causally linked: changing income affects debt-to-income ratio automatically</li>
+    </ul>
+
+    <h3>Diversity in Counterfactuals</h3>
+    <ul>
+        <li>One counterfactual: "increase income by $13K"</li>
+        <li>Another: "reduce debt by $8K and increase credit score by 30 points"</li>
+        <li>Diversity is enforced by maximizing pairwise distance between counterfactuals</li>
+        <li>This gives the user multiple actionable paths — they choose what's feasible for them</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Unrealistic counterfactuals</strong> — suggesting a 22-year-old have 30 years of credit history</li>
+        <li>⚠️ <strong>Ignoring feature correlations</strong> — changing income without adjusting related features creates implausible profiles</li>
+        <li>⚠️ <strong>Model instability</strong> — if the model is retrained, old counterfactuals may no longer flip the decision</li>
+        <li>⚠️ <strong>Too many changes</strong> — a counterfactual that changes 8 features isn't actionable; prefer sparse changes</li>
+        <li>⚠️ <strong>Gaming the system</strong> — users might manipulate features to get approved without actually reducing risk</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Gradient-based search: O(features × iterations) per counterfactual — fast for differentiable models</li>
+        <li>For tree-based models: use model-agnostic approaches (random perturbation + selection)</li>
+        <li>Generating diverse counterfactuals: O(k × features × iterations) where k = number of counterfactuals</li>
+        <li>Pre-computing counterfactuals for common rejection profiles can speed up real-time serving</li>
+        <li>DiCE library handles both gradient-based and random search efficiently</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Counterfactuals are the most user-friendly explanation — "change X to get Y"</li>
+        <li>✅ Natural language presentation: "If your annual income were $55,000 instead of $42,000, your loan would be approved"</li>
+        <li>✅ Multiple counterfactuals empower the user — they choose the most feasible path</li>
+        <li>⚠️ Counterfactuals don't explain the model's reasoning — they explain what to change, not why</li>
+        <li>⚠️ Combine with SHAP for a complete picture: SHAP explains "why rejected" + counterfactuals explain "how to get approved"</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 1: Generate Loan Application Data
+# ═══════════════════════════════════════════════════════════════
+n = 3000
+income = np.random.normal(55000, 18000, n).clip(15000, 200000)
+debt = np.random.normal(15000, 8000, n).clip(0, 100000)
+credit_score = np.random.normal(680, 60, n).clip(300, 850).astype(int)
+employment_years = np.random.exponential(5, n).clip(0, 40)
+age = np.random.normal(38, 12, n).clip(18, 75).astype(int)
+num_dependents = np.random.poisson(1.5, n).clip(0, 6)
+
+debt_to_income = debt / income
+
+# Approval logic
+log_odds = (-2 + 0.00004 * income - 0.00003 * debt + 0.008 * credit_score
+            + 0.05 * employment_years - 3 * debt_to_income - 0.01 * num_dependents)
+prob_approve = 1 / (1 + np.exp(-log_odds))
+approved = (np.random.random(n) < prob_approve).astype(int)
+
+df = pd.DataFrame({
+    'income': income, 'debt': debt, 'credit_score': credit_score,
+    'employment_years': employment_years, 'age': age,
+    'num_dependents': num_dependents, 'debt_to_income': debt_to_income,
+    'approved': approved
+})
+
+feature_cols = ['income', 'debt', 'credit_score', 'employment_years',
+                'age', 'num_dependents', 'debt_to_income']
+X = df[feature_cols].values
+y = df['approved'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+model = GradientBoostingClassifier(n_estimators=200, max_depth=4, random_state=42)
+model.fit(X_train_s, y_train)
+acc = accuracy_score(y_test, model.predict(X_test_s))
+print(f"=== Loan Approval Model ===")
+print(f"  Accuracy: {acc:.4f}")
+print(f"  Approval rate: {y.mean():.1%}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2: Select a Rejected Applicant
+# ═══════════════════════════════════════════════════════════════
+rejected_mask = model.predict(X_test_s) == 0
+rejected_indices = np.where(rejected_mask)[0]
+applicant_idx = rejected_indices[5]
+applicant = X_test[applicant_idx]
+applicant_s = X_test_s[applicant_idx]
+
+print(f"\n=== Rejected Applicant Profile ===")
+for i, col in enumerate(feature_cols):
+    print(f"  {col:<20}: {applicant[i]:.2f}")
+print(f"  Model prediction: REJECTED (prob={model.predict_proba(applicant_s.reshape(1,-1))[0,1]:.3f})")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 3: Define Actionability Constraints
+# ═══════════════════════════════════════════════════════════════
+actionability = {
+    'income': 'increase',          # can increase (get a raise, second job)
+    'debt': 'decrease',            # can decrease (pay off debt)
+    'credit_score': 'increase',    # can increase (pay bills on time)
+    'employment_years': 'increase',# can increase (wait longer)
+    'age': 'immutable',            # cannot change
+    'num_dependents': 'immutable', # treat as immutable for this scenario
+    'debt_to_income': 'any',       # derived — changes with income/debt
+}
+
+feature_ranges = {
+    'income': (15000, 200000), 'debt': (0, 100000), 'credit_score': (300, 850),
+    'employment_years': (0, 40), 'age': (18, 75), 'num_dependents': (0, 6),
+    'debt_to_income': (0, 2)
+}
+
+print(f"\n=== Actionability Constraints ===")
+for feat, action in actionability.items():
+    print(f"  {feat:<20}: {action}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: Counterfactual Search Algorithm
+# ═══════════════════════════════════════════════════════════════
+def generate_counterfactuals(model, scaler, original, feature_names, actionability,
+                              feature_ranges, n_cf=5, n_iterations=2000, step_size=0.05):
+    """Generate diverse counterfactual explanations."""
+    counterfactuals = []
+    original_scaled = scaler.transform(original.reshape(1, -1)).flatten()
+
+    for cf_idx in range(n_cf * 3):  # generate extra, keep best
+        candidate = original.copy()
+
+        for iteration in range(n_iterations):
+            # Random perturbation
+            feat_idx = np.random.randint(len(feature_names))
+            feat_name = feature_names[feat_idx]
+
+            if actionability[feat_name] == 'immutable':
+                continue
+
+            # Determine perturbation direction
+            perturbation = np.random.normal(0, step_size)
+            feat_range = feature_ranges[feat_name]
+            feat_scale = feat_range[1] - feat_range[0]
+            delta = perturbation * feat_scale
+
+            if actionability[feat_name] == 'increase' and delta < 0:
+                delta = abs(delta)
+            elif actionability[feat_name] == 'decrease' and delta > 0:
+                delta = -abs(delta)
+
+            new_val = np.clip(candidate[feat_idx] + delta, feat_range[0], feat_range[1])
+            candidate[feat_idx] = new_val
+
+            # Update derived features
+            income_idx = feature_names.index('income')
+            debt_idx = feature_names.index('debt')
+            dti_idx = feature_names.index('debt_to_income')
+            if candidate[income_idx] > 0:
+                candidate[dti_idx] = candidate[debt_idx] / candidate[income_idx]
+
+            # Check if decision flips
+            candidate_scaled = scaler.transform(candidate.reshape(1, -1))
+            pred = model.predict(candidate_scaled)[0]
+            prob = model.predict_proba(candidate_scaled)[0, 1]
+
+            if pred == 1 and prob > 0.55:
+                # Calculate distance (L1 normalized)
+                distance = np.sum(np.abs(candidate - original) /
+                                   np.array([feat_ranges[f][1] - feat_ranges[f][0]
+                                             for f in feature_names]))
+                counterfactuals.append({
+                    'values': candidate.copy(),
+                    'distance': distance,
+                    'probability': prob,
+                    'changes': {}
+                })
+                # Record what changed
+                for i, feat in enumerate(feature_names):
+                    if abs(candidate[i] - original[i]) > 1e-6:
+                        counterfactuals[-1]['changes'][feat] = (original[i], candidate[i])
+                break
+
+    # Sort by distance and select diverse ones
+    counterfactuals.sort(key=lambda x: x['distance'])
+
+    # Diversity filter: keep counterfactuals that change different features
+    diverse = []
+    seen_change_sets = []
+    for cf in counterfactuals:
+        change_set = frozenset(cf['changes'].keys())
+        if change_set not in seen_change_sets:
+            diverse.append(cf)
+            seen_change_sets.append(change_set)
+        if len(diverse) >= n_cf:
+            break
+
+    return diverse
+
+counterfactuals = generate_counterfactuals(
+    model, scaler, applicant, feature_cols, actionability, feature_ranges, n_cf=5)
+
+print(f"\n=== Counterfactual Explanations ({len(counterfactuals)} found) ===")
+for i, cf in enumerate(counterfactuals):
+    print(f"\n  Counterfactual {i+1} (distance={cf['distance']:.4f}, P(approve)={cf['probability']:.3f}):")
+    for feat, (old, new) in cf['changes'].items():
+        direction = "↑" if new > old else "↓"
+        if feat == 'income':
+            print(f"    {feat}: ${old:,.0f} → ${new:,.0f} {direction}")
+        elif feat == 'debt':
+            print(f"    {feat}: ${old:,.0f} → ${new:,.0f} {direction}")
+        elif feat == 'credit_score':
+            print(f"    {feat}: {old:.0f} → {new:.0f} {direction}")
+        elif feat == 'debt_to_income':
+            print(f"    {feat}: {old:.3f} → {new:.3f} {direction}")
+        else:
+            print(f"    {feat}: {old:.2f} → {new:.2f} {direction}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 5: Natural Language Explanations
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== Natural Language Explanations ===")
+for i, cf in enumerate(counterfactuals):
+    changes = []
+    for feat, (old, new) in cf['changes'].items():
+        if feat == 'income':
+            changes.append(f"your annual income were ${new:,.0f} instead of ${old:,.0f}")
+        elif feat == 'debt':
+            changes.append(f"your total debt were ${new:,.0f} instead of ${old:,.0f}")
+        elif feat == 'credit_score':
+            changes.append(f"your credit score were {new:.0f} instead of {old:.0f}")
+        elif feat == 'employment_years':
+            changes.append(f"you had {new:.1f} years of employment instead of {old:.1f}")
+        elif feat == 'debt_to_income':
+            changes.append(f"your debt-to-income ratio were {new:.2f} instead of {old:.2f}")
+    if changes:
+        explanation = "If " + " and ".join(changes) + ", your loan would likely be approved."
+        print(f"  Option {i+1}: {explanation}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 6: Visualization
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Plot 1: Original vs counterfactuals (radar-style bar chart)
+ax = axes[0, 0]
+actionable_feats = [f for f in feature_cols if actionability[f] != 'immutable']
+n_feats = len(actionable_feats)
+x_pos = np.arange(n_feats)
+
+# Normalize values to [0, 1] for comparison
+orig_norm = [(applicant[feature_cols.index(f)] - feature_ranges[f][0]) /
+             (feature_ranges[f][1] - feature_ranges[f][0]) for f in actionable_feats]
+ax.bar(x_pos - 0.2, orig_norm, 0.35, color='#f85149', alpha=0.8, label='Original (Rejected)')
+
+if counterfactuals:
+    cf_norm = [(counterfactuals[0]['values'][feature_cols.index(f)] - feature_ranges[f][0]) /
+               (feature_ranges[f][1] - feature_ranges[f][0]) for f in actionable_feats]
+    ax.bar(x_pos + 0.2, cf_norm, 0.35, color='#3fb950', alpha=0.8, label='Counterfactual 1 (Approved)')
+
+ax.set_xticks(x_pos)
+ax.set_xticklabels(actionable_feats, rotation=45, ha='right', fontsize=8)
+ax.set_ylabel('Normalized Value')
+ax.set_title('Original vs Closest Counterfactual')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2, axis='y')
+
+# Plot 2: Distance comparison
+ax = axes[0, 1]
+if counterfactuals:
+    distances = [cf['distance'] for cf in counterfactuals]
+    probs = [cf['probability'] for cf in counterfactuals]
+    colors = ['#3fb950', '#58a6ff', '#f0883e', '#bc8cff', '#f85149'][:len(counterfactuals)]
+    ax.scatter(distances, probs, c=colors, s=100, zorder=5)
+    for i, cf in enumerate(counterfactuals):
+        ax.annotate(f'CF {i+1}', (distances[i], probs[i]), fontsize=9, ha='left', color='white')
+ax.set_xlabel('Distance from Original')
+ax.set_ylabel('Approval Probability')
+ax.set_title('Counterfactual Diversity')
+ax.axhline(y=0.5, color='#f85149', linestyle='--', alpha=0.5, label='Decision boundary')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Plot 3: Feature changes per counterfactual
+ax = axes[1, 0]
+if counterfactuals:
+    cf_labels = [f'CF {i+1}' for i in range(len(counterfactuals))]
+    n_changes = [len(cf['changes']) for cf in counterfactuals]
+    ax.barh(cf_labels, n_changes, color=['#3fb950', '#58a6ff', '#f0883e', '#bc8cff', '#f85149'][:len(counterfactuals)])
+    ax.set_xlabel('Number of Features Changed')
+    ax.set_title('Sparsity of Counterfactuals')
+    ax.grid(True, alpha=0.2, axis='x')
+
+# Plot 4: Which features are changed most often
+ax = axes[1, 1]
+if counterfactuals:
+    feat_change_count = {}
+    for cf in counterfactuals:
+        for feat in cf['changes']:
+            feat_change_count[feat] = feat_change_count.get(feat, 0) + 1
+    feats = list(feat_change_count.keys())
+    counts = list(feat_change_count.values())
+    ax.barh(feats, counts, color='#58a6ff', alpha=0.8)
+    ax.set_xlabel('Times Changed Across Counterfactuals')
+    ax.set_title('Most Commonly Changed Features')
+    ax.grid(True, alpha=0.2, axis='x')
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_53_counterfactuals.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ Counterfactual analysis saved as project_53_counterfactuals.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Counterfactual explanations answer "what should I change?" — the most actionable form of model explanation</li>
+        <li>Actionability constraints are essential — don't suggest changing immutable features like age or race</li>
+        <li>Diverse counterfactuals give users options — different paths to the desired outcome</li>
+        <li>Proximity ensures suggestions are realistic — small changes are more feasible than large ones</li>
+        <li>Combine with SHAP (Project 27) for complete explanations: "why rejected" + "how to get approved"</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 54</h3>
+    <ul>
+        <li>Counterfactuals reason about individual decisions — but what about understanding the underlying causal structure?</li>
+        <li>Project 54 introduces <strong>Structural Equation Modeling (SEM)</strong> — modeling latent causes that aren't directly observed</li>
+        <li>SEM combines factor analysis (Project 24) with causal path diagrams (Project 37) to model complex causal systems</li>
+        <li>We'll model how latent variables like "financial health" and "creditworthiness" drive observable features</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_52.html">← Project 52: Online Learning</a>
+    <a href="project_54.html">Project 54: Structural Equation Modeling →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

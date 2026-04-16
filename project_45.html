@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 45 — Recommendation Engine — Collaborative Filtering With Matrix Factorization</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 45: Recommendation Engine — Collaborative Filtering With Matrix Factorization</h1>
+<p>
+    <span class="tag">Collaborative Filtering</span>
+    <span class="tag">Matrix Factorization</span>
+    <span class="tag">SVD</span>
+    <span class="tag">ALS</span>
+    <span class="tag">Implicit Feedback</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 24, 14</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A streaming platform has 10,000 users and 5,000 movies — but each user has rated only 20–50 movies</li>
+        <li>The user-movie rating matrix is 99.5% empty (sparse)</li>
+        <li>Goal → predict what rating a user would give to movies they haven't seen, then recommend the highest-predicted ones</li>
+        <li>No content features needed — just the pattern of who liked what (collaborative filtering)</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 24: PCA finds latent dimensions in data — matrix factorization does the same for user-item matrices</li>
+        <li>From Project 14: K-Means groups similar items — collaborative filtering groups similar users/items implicitly</li>
+        <li>Decompose the rating matrix R ≈ U × V^T where U = user factors, V = item factors</li>
+        <li>Each user and item is represented by a low-dimensional latent vector (e.g., 50 dimensions)</li>
+        <li>Predicted rating = dot product of user vector and item vector</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate a synthetic user-movie rating matrix with latent structure</li>
+        <li>Implement user-based collaborative filtering (nearest neighbors)</li>
+        <li>Implement matrix factorization using SVD</li>
+        <li>Implement ALS (Alternating Least Squares) for large-scale factorization</li>
+        <li>Evaluate with RMSE and ranking metrics (precision@k, recall@k)</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Handle sparsity — most entries are missing; only train on observed ratings</li>
+        <li>✅ Use regularization in matrix factorization — prevents overfitting to observed ratings</li>
+        <li>✅ Evaluate with ranking metrics (precision@k) — not just RMSE on ratings</li>
+        <li>✅ Center ratings by user mean — removes user-specific bias (some rate everything high)</li>
+        <li>✅ Use train/test split on ratings, not users — each user should have some ratings in both sets</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT treat missing ratings as zeros — missing ≠ disliked; it means "not yet rated"</li>
+        <li>❌ Do NOT use full SVD on the sparse matrix — it's O(n³) and treats missing as zero</li>
+        <li>❌ Do NOT ignore the cold-start problem — new users/items have no ratings to learn from</li>
+        <li>❌ Do NOT evaluate only on RMSE — a model can have low RMSE but bad recommendations</li>
+        <li>❌ Do NOT recommend items the user has already rated — filter them out</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>User-based CF</strong> → small datasets; find similar users, recommend what they liked</li>
+        <li>🔹 <strong>Item-based CF</strong> → more stable than user-based; items change less than user preferences</li>
+        <li>🔹 <strong>Matrix Factorization (SVD/ALS)</strong> → large sparse matrices; learns latent factors</li>
+        <li>🔹 <strong>Content-based filtering</strong> → when item features are available; handles cold-start for new items</li>
+        <li>🔹 <strong>Hybrid</strong> → combine collaborative + content for best results</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When there are very few users or items — not enough data for collaborative patterns</li>
+        <li>🚫 When all items are unique (no repeat consumption) — collaborative filtering needs overlap</li>
+        <li>🚫 For cold-start users/items — no interaction history to learn from; use content-based</li>
+        <li>🚫 When explicit ratings are unavailable — use implicit feedback methods instead</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Collaborative Filtering Intuition</h3>
+    <ul>
+        <li>"Users who agreed in the past will agree in the future"</li>
+        <li>If User A and User B both liked movies X, Y, Z — and A liked movie W — recommend W to B</li>
+        <li>No need to know WHY they liked those movies — just the pattern of agreement</li>
+    </ul>
+
+    <h3>Matrix Factorization</h3>
+    <ul>
+        <li>Rating matrix R (users × items) ≈ U (users × k) × V^T (k × items)</li>
+        <li>k = number of latent factors (typically 20–100)</li>
+        <li>Each user has a k-dimensional preference vector; each item has a k-dimensional attribute vector</li>
+        <li>Predicted rating r̂_ui = u_u · v_i (dot product)</li>
+        <li>Latent factors might correspond to genres, mood, complexity — but they're learned, not predefined</li>
+    </ul>
+
+    <h3>ALS (Alternating Least Squares)</h3>
+    <ul>
+        <li>Objective: minimize Σ (r_ui - u_u · v_i)² + λ(||U||² + ||V||²) over observed ratings</li>
+        <li>Fix U, solve for V (least squares) → fix V, solve for U → repeat</li>
+        <li>Each step is a closed-form solution — no gradient descent needed</li>
+        <li>Parallelizable: each user's factors can be updated independently</li>
+    </ul>
+
+    <h3>Evaluation Metrics</h3>
+    <ul>
+        <li>RMSE: how close are predicted ratings to actual ratings</li>
+        <li>Precision@k: of the top-k recommended items, how many did the user actually like?</li>
+        <li>Recall@k: of all items the user liked, how many appeared in the top-k?</li>
+        <li>NDCG: measures ranking quality — higher-rated items should appear earlier</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Treating missing as zero</strong> — inflates the matrix with false negatives; only train on observed entries</li>
+        <li>⚠️ <strong>Cold-start problem</strong> — new users/items have no history; need fallback strategies</li>
+        <li>⚠️ <strong>Popularity bias</strong> — popular items get recommended to everyone; less diverse recommendations</li>
+        <li>⚠️ <strong>Overfitting</strong> — with sparse data, the model can memorize observed ratings; use regularization</li>
+        <li>⚠️ <strong>Evaluation leakage</strong> — don't let the model see test ratings during training</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>User-based CF: O(n_users²) for similarity computation — doesn't scale beyond ~100K users</li>
+        <li>ALS: O(n_observed × k²) per iteration — scales to millions of users/items</li>
+        <li>SVD: truncated SVD is O(n_observed × k) — efficient for sparse matrices</li>
+        <li>For production: use implicit library or Spark ALS for distributed computation</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ "Users who liked X also liked Y" is intuitive — easy to explain recommendations</li>
+        <li>✅ Latent factors can sometimes be interpreted (action vs drama, mainstream vs niche)</li>
+        <li>⚠️ Matrix factorization factors are abstract — hard to explain WHY a specific recommendation was made</li>
+        <li>⚠️ For explainability, combine with content features — "recommended because you liked similar sci-fi movies"</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_squared_error
+from scipy.sparse.linalg import svds
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate synthetic rating data ───
+n_users = 500
+n_items = 200
+k_true = 10  # true latent dimensions
+
+# True latent factors
+U_true = np.random.normal(0, 1, (n_users, k_true))
+V_true = np.random.normal(0, 1, (n_items, k_true))
+R_true = U_true @ V_true.T + 3.0  # center around 3
+
+# Clip to 1-5 rating scale
+R_true = np.clip(R_true, 1, 5)
+
+# Observe only ~5% of ratings (sparse)
+observe_prob = 0.05
+mask = np.random.binomial(1, observe_prob, (n_users, n_items)).astype(bool)
+R_observed = np.where(mask, R_true + np.random.normal(0, 0.5, R_true.shape), 0)
+R_observed = np.clip(R_observed, 1, 5) * mask
+
+n_ratings = mask.sum()
+sparsity = 1 - n_ratings / (n_users * n_items)
+
+print("=== Rating Matrix ===")
+print(f"  Users: {n_users}, Items: {n_items}")
+print(f"  Observed ratings: {n_ratings} ({1-sparsity:.1%} of matrix)")
+print(f"  Sparsity: {sparsity:.1%}")
+print(f"  Rating range: {R_observed[mask].min():.1f} – {R_observed[mask].max():.1f}")
+
+# ─── Step 2: Train/test split on observed ratings ───
+observed_indices = np.argwhere(mask)
+np.random.shuffle(observed_indices)
+split = int(0.8 * len(observed_indices))
+train_idx = observed_indices[:split]
+test_idx = observed_indices[split:]
+
+R_train = np.zeros_like(R_observed)
+for u, i in train_idx:
+    R_train[u, i] = R_observed[u, i]
+
+train_mask = R_train > 0
+test_ratings = np.array([R_observed[u, i] for u, i in test_idx])
+
+print(f"  Train ratings: {len(train_idx)}, Test ratings: {len(test_idx)}")
+
+# ─── Step 3: Baseline — global mean ───
+global_mean = R_train[train_mask].mean()
+baseline_pred = np.full(len(test_idx), global_mean)
+baseline_rmse = np.sqrt(mean_squared_error(test_ratings, baseline_pred))
+print(f"\n=== Baseline (Global Mean = {global_mean:.2f}) ===")
+print(f"  RMSE: {baseline_rmse:.4f}")
+
+# ─── Step 4: User-based collaborative filtering ───
+print(f"\n=== User-Based Collaborative Filtering ===")
+# Center ratings by user mean
+user_means = np.zeros(n_users)
+for u in range(n_users):
+    user_ratings = R_train[u, R_train[u] > 0]
+    user_means[u] = user_ratings.mean() if len(user_ratings) > 0 else global_mean
+
+R_centered = R_train.copy()
+for u in range(n_users):
+    R_centered[u, train_mask[u]] -= user_means[u]
+
+# Cosine similarity between users
+from sklearn.metrics.pairwise import cosine_similarity
+user_sim = cosine_similarity(R_centered)
+np.fill_diagonal(user_sim, 0)
+
+# Predict using top-K similar users
+K = 20
+ubcf_preds = []
+for u, i in test_idx:
+    sim_scores = user_sim[u]
+    # Users who rated item i
+    rated_mask = R_train[:, i] > 0
+    relevant_sims = sim_scores * rated_mask
+    top_k = np.argsort(relevant_sims)[-K:]
+    top_k = top_k[relevant_sims[top_k] > 0]
+
+    if len(top_k) > 0:
+        weights = relevant_sims[top_k]
+        weighted_ratings = R_centered[top_k, i]
+        pred = user_means[u] + np.dot(weights, weighted_ratings) / (np.abs(weights).sum() + 1e-8)
+    else:
+        pred = user_means[u]
+    ubcf_preds.append(np.clip(pred, 1, 5))
+
+ubcf_rmse = np.sqrt(mean_squared_error(test_ratings, ubcf_preds))
+print(f"  RMSE: {ubcf_rmse:.4f}")
+
+# ─── Step 5: Matrix Factorization (SVD) ───
+print(f"\n=== Matrix Factorization (Truncated SVD) ===")
+# Fill missing with user means for SVD
+R_filled = R_train.copy()
+for u in range(n_users):
+    R_filled[u, ~train_mask[u]] = user_means[u]
+
+# Center
+R_filled_centered = R_filled - user_means.reshape(-1, 1)
+
+# Truncated SVD
+k = 20
+U, sigma, Vt = svds(R_filled_centered, k=k)
+sigma_diag = np.diag(sigma)
+predicted_centered = U @ sigma_diag @ Vt
+predicted_ratings = predicted_centered + user_means.reshape(-1, 1)
+predicted_ratings = np.clip(predicted_ratings, 1, 5)
+
+svd_preds = [predicted_ratings[u, i] for u, i in test_idx]
+svd_rmse = np.sqrt(mean_squared_error(test_ratings, svd_preds))
+print(f"  Latent factors: {k}")
+print(f"  RMSE: {svd_rmse:.4f}")
+
+# ─── Step 6: ALS (manual implementation) ───
+print(f"\n=== ALS (Alternating Least Squares) ===")
+k_als = 20
+lambda_reg = 0.1
+n_iterations = 20
+
+U_als = np.random.normal(0, 0.1, (n_users, k_als))
+V_als = np.random.normal(0, 0.1, (n_items, k_als))
+
+for iteration in range(n_iterations):
+    # Fix V, solve for U
+    for u in range(n_users):
+        items_rated = np.where(train_mask[u])[0]
+        if len(items_rated) == 0:
+            continue
+        V_sub = V_als[items_rated]
+        r_sub = R_train[u, items_rated] - user_means[u]
+        A = V_sub.T @ V_sub + lambda_reg * np.eye(k_als)
+        b = V_sub.T @ r_sub
+        U_als[u] = np.linalg.solve(A, b)
+
+    # Fix U, solve for V
+    for i in range(n_items):
+        users_rated = np.where(train_mask[:, i])[0]
+        if len(users_rated) == 0:
+            continue
+        U_sub = U_als[users_rated]
+        r_sub = R_train[users_rated, i] - user_means[users_rated]
+        A = U_sub.T @ U_sub + lambda_reg * np.eye(k_als)
+        b = U_sub.T @ r_sub
+        V_als[i] = np.linalg.solve(A, b)
+
+    # Evaluate
+    als_pred_matrix = U_als @ V_als.T + user_means.reshape(-1, 1)
+    als_pred_matrix = np.clip(als_pred_matrix, 1, 5)
+    als_preds = [als_pred_matrix[u, i] for u, i in test_idx]
+    als_rmse = np.sqrt(mean_squared_error(test_ratings, als_preds))
+
+    if (iteration + 1) % 5 == 0:
+        print(f"  Iteration {iteration+1}: RMSE = {als_rmse:.4f}")
+
+# ─── Step 7: Generate recommendations ───
+print(f"\n=== Sample Recommendations (User 0) ===")
+user_id = 0
+user_rated = np.where(train_mask[user_id])[0]
+user_unrated = np.where(~train_mask[user_id])[0]
+pred_scores = als_pred_matrix[user_id, user_unrated]
+top_10 = user_unrated[np.argsort(pred_scores)[-10:][::-1]]
+
+print(f"  User {user_id} has rated {len(user_rated)} items")
+print(f"  Top 10 recommendations:")
+for rank, item in enumerate(top_10, 1):
+    print(f"    {rank}. Item {item} (predicted rating: {als_pred_matrix[user_id, item]:.2f})")
+
+# ─── Step 8: Summary and visualization ───
+print(f"\n=== Method Comparison ===")
+print(f"  {'Method':<25} {'RMSE':>8}")
+print(f"  {'-'*35}")
+print(f"  {'Global Mean':<25} {baseline_rmse:>8.4f}")
+print(f"  {'User-Based CF (K=20)':<25} {ubcf_rmse:>8.4f}")
+print(f"  {'SVD (k=20)':<25} {svd_rmse:>8.4f}")
+print(f"  {'ALS (k=20)':<25} {als_rmse:>8.4f}")
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Rating distribution
+axes[0, 0].hist(R_observed[mask], bins=20, color='#58a6ff', alpha=0.7, edgecolor='white')
+axes[0, 0].set_xlabel('Rating')
+axes[0, 0].set_ylabel('Count')
+axes[0, 0].set_title('Rating Distribution')
+axes[0, 0].grid(True, alpha=0.2)
+
+# Sparsity pattern (sample)
+sample_R = R_train[:50, :50]
+axes[0, 1].imshow(sample_R > 0, cmap='Blues', aspect='auto')
+axes[0, 1].set_xlabel('Items')
+axes[0, 1].set_ylabel('Users')
+axes[0, 1].set_title('Rating Matrix Sparsity (50×50 sample)')
+
+# Method comparison
+methods = ['Mean', 'UBCF', 'SVD', 'ALS']
+rmses = [baseline_rmse, ubcf_rmse, svd_rmse, als_rmse]
+colors = ['#c9d1d9', '#f0883e', '#58a6ff', '#3fb950']
+axes[1, 0].bar(methods, rmses, color=colors, alpha=0.8, edgecolor='white')
+axes[1, 0].set_ylabel('RMSE')
+axes[1, 0].set_title('RMSE Comparison')
+axes[1, 0].grid(True, alpha=0.2, axis='y')
+
+# Predicted vs actual
+axes[1, 1].scatter(test_ratings, als_preds, alpha=0.3, s=10, color='#3fb950')
+axes[1, 1].plot([1, 5], [1, 5], '--', color='white', alpha=0.5)
+axes[1, 1].set_xlabel('Actual Rating')
+axes[1, 1].set_ylabel('Predicted Rating (ALS)')
+axes[1, 1].set_title('ALS: Predicted vs Actual')
+axes[1, 1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_45_recommendation.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Recommendation analysis saved as project_45_recommendation.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Collaborative filtering finds patterns in user-item interactions without needing content features</li>
+        <li>Matrix factorization learns latent factors for users and items — predicted rating = dot product</li>
+        <li>ALS is the workhorse for large-scale recommendation — parallelizable and handles sparsity</li>
+        <li>Never treat missing ratings as zeros — missing means "not yet rated," not "disliked"</li>
+        <li>Evaluate with ranking metrics (precision@k), not just RMSE — recommendations are about ordering</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 46</h3>
+    <ul>
+        <li>Phase 4 is complete — we've mastered advanced patterns from XGBoost to recommendation engines</li>
+        <li>Phase 5 begins with <strong>Gaussian Process Regression</strong> — uncertainty-aware predictions on small data</li>
+        <li>GPs provide a full probability distribution over predictions, building on Bayesian regression (Project 38)</li>
+        <li>The focus shifts to mastery-level techniques and bridging to deep learning</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_44.html">← Project 44: Forecasting With Prophet</a>
+    <a href="project_46.html">Project 46: Gaussian Process Regression →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

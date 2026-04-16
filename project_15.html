@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 15 — Cross-Validating a Model — Getting a Trustworthy Score</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 2 — Easy</span>
+<h1>Project 15: Cross-Validating a Model — Getting a Trustworthy Score</h1>
+<p>
+    <span class="tag">K-Fold CV</span>
+    <span class="tag">StratifiedKFold</span>
+    <span class="tag">cross_val_score</span>
+    <span class="tag">why single split fails</span>
+</p>
+<p class="difficulty">Difficulty: Easy &nbsp;|&nbsp; Builds on: Projects 8, 10, 12</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You've built a model and your manager asks: <strong>"What's the model's accuracy?"</strong></li>
+        <li>You report 85% from a single train/test split</li>
+        <li>Your colleague runs the same code with a different random seed and gets 78%</li>
+        <li>Which number is right? Neither — a single split is unreliable</li>
+        <li>Goal → get a TRUSTWORTHY performance estimate using cross-validation</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Instead of one train/test split, use K different splits</li>
+        <li>Each split uses a different portion as the test set</li>
+        <li>Average the K scores → more reliable estimate</li>
+        <li>The standard deviation of the K scores tells you how stable the model is</li>
+        <li>Use StratifiedKFold for classification to maintain class proportions in each fold</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Show the instability of single train/test splits (different seeds → different scores)</li>
+        <li>Implement K-Fold CV manually to understand the mechanics</li>
+        <li>Use sklearn's cross_val_score for the clean version</li>
+        <li>Compare KFold vs StratifiedKFold</li>
+        <li>Use CV to compare multiple models fairly</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use cross-validation for ALL model evaluations — not just a single split</li>
+        <li>✅ Report mean ± std of CV scores — the std tells you about stability</li>
+        <li>✅ Use StratifiedKFold for classification — preserves class balance in each fold</li>
+        <li>✅ Use K=5 or K=10 as default — good balance between bias and variance of the estimate</li>
+        <li>✅ Use Pipeline inside CV to prevent data leakage from preprocessing (Project 13)</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT report a single train/test split as the final score — it's unreliable</li>
+        <li>❌ Do NOT use K=n (Leave-One-Out) for large datasets — too slow and high variance</li>
+        <li>❌ Do NOT use regular KFold for imbalanced classification — use StratifiedKFold</li>
+        <li>❌ Do NOT tune hyperparameters using CV scores and then report those same scores as final performance</li>
+        <li>❌ Do NOT forget that CV is for EVALUATION, not for training the final model</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>K-Fold CV (K=5)</strong> → default for most problems</li>
+        <li>🔹 <strong>StratifiedKFold</strong> → for classification, especially with imbalanced classes</li>
+        <li>🔹 <strong>K=10</strong> → when you want a more precise estimate and have enough data</li>
+        <li>🔹 <strong>RepeatedKFold</strong> → for even more reliable estimates (repeats the entire CV process)</li>
+        <li>🔹 <strong>Leave-One-Out</strong> → only for very small datasets (&lt;50 samples)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Leave-One-Out is too slow for large datasets and has high variance</li>
+        <li>🚫 Regular KFold can create folds with no positive examples in imbalanced data</li>
+        <li>🚫 CV doesn't work well for time series — use TimeSeriesSplit instead (Project 25)</li>
+        <li>🚫 CV scores are for evaluation — the final model should be trained on ALL data</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>K-Fold Cross-Validation</h3>
+    <ol>
+        <li>Split data into K equal-sized folds</li>
+        <li>For each fold i (i = 1 to K):
+            <ul>
+                <li>Use fold i as the test set</li>
+                <li>Use all other folds as the training set</li>
+                <li>Train the model, evaluate on fold i, record the score</li>
+            </ul>
+        </li>
+        <li>Final score = mean of K scores</li>
+        <li>Uncertainty = standard deviation of K scores</li>
+    </ol>
+
+    <h3>Why K=5 or K=10?</h3>
+    <ul>
+        <li>K=2: each fold uses only 50% for training — high bias</li>
+        <li>K=5: each fold uses 80% for training — good balance</li>
+        <li>K=10: each fold uses 90% for training — lower bias, more computation</li>
+        <li>K=n (LOO): each fold uses n-1 for training — lowest bias, highest variance, very slow</li>
+    </ul>
+
+    <h3>StratifiedKFold</h3>
+    <ul>
+        <li>Ensures each fold has the same class proportions as the full dataset</li>
+        <li>Critical for imbalanced data: if 10% positive, each fold should have ~10% positive</li>
+        <li>Regular KFold might create a fold with 0% positive — useless for evaluation</li>
+    </ul>
+
+    <h3>CV for Model Comparison</h3>
+    <ul>
+        <li>Run CV on Model A and Model B with the SAME folds</li>
+        <li>Compare mean scores — the model with higher mean CV score is better</li>
+        <li>Check if the difference is larger than the standard deviations — statistical significance</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Data leakage in CV</strong> — scaling before CV leaks information; use Pipeline</li>
+        <li>⚠️ <strong>Reporting CV score as final performance after tuning</strong> — need a held-out test set</li>
+        <li>⚠️ <strong>Using CV for time series</strong> — future data leaks into training folds</li>
+        <li>⚠️ <strong>Ignoring the standard deviation</strong> — mean=85% ± 10% is very different from mean=85% ± 1%</li>
+        <li>⚠️ <strong>Training final model on only one fold</strong> — after CV, retrain on ALL data</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>K-Fold CV trains the model K times — K× the cost of a single train</li>
+        <li>For expensive models, K=5 is preferred over K=10</li>
+        <li>Can parallelize folds with <code>n_jobs=-1</code> in cross_val_score</li>
+        <li>For very large datasets, a single 80/20 split may be sufficient (the variance is low)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ "85% ± 2%" is more honest and informative than just "85%"</li>
+        <li>✅ High std means the model is sensitive to which data it sees — a red flag</li>
+        <li>✅ CV enables fair model comparison — same data, same folds</li>
+        <li>✅ Stakeholders can understand: "we tested the model 5 different ways and it consistently scored 83-87%"</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import (cross_val_score, KFold, StratifiedKFold,
+                                     train_test_split)
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+# ─── Step 1: Show instability of single splits ───
+iris = load_iris()
+X, y = iris.data, iris.target
+
+print("=== Instability of Single Train/Test Split ===")
+for seed in range(10):
+    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, random_state=seed)
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_tr, y_tr)
+    acc = model.score(X_te, y_te)
+    print(f"  Seed={seed}: Accuracy={acc:.2%}")
+
+# ─── Step 2: Manual K-Fold CV ───
+print(f"\n=== Manual 5-Fold CV ===")
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+fold_scores = []
+
+for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
+    X_tr, X_te = X[train_idx], X[test_idx]
+    y_tr, y_te = y[train_idx], y[test_idx]
+
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_tr, y_tr)
+    score = model.score(X_te, y_te)
+    fold_scores.append(score)
+    print(f"  Fold {fold+1}: train={len(train_idx)}, test={len(test_idx)}, accuracy={score:.2%}")
+
+print(f"  Mean: {np.mean(fold_scores):.2%} ± {np.std(fold_scores):.2%}")
+
+# ─── Step 3: cross_val_score (the clean way) ───
+print(f"\n=== cross_val_score ===")
+scores = cross_val_score(
+    LogisticRegression(max_iter=1000), X, y,
+    cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),
+    scoring='accuracy'
+)
+print(f"  Scores: {scores.round(4)}")
+print(f"  Mean: {scores.mean():.2%} ± {scores.std():.2%}")
+
+# ─── Step 4: KFold vs StratifiedKFold ───
+print(f"\n=== KFold vs StratifiedKFold ===")
+for cv_name, cv in [('KFold', KFold(5, shuffle=True, random_state=42)),
+                     ('StratifiedKFold', StratifiedKFold(5, shuffle=True, random_state=42))]:
+    scores = cross_val_score(LogisticRegression(max_iter=1000), X, y, cv=cv)
+    print(f"  {cv_name:>16}: {scores.mean():.2%} ± {scores.std():.2%}")
+
+# ─── Step 5: Fair model comparison using CV ───
+print(f"\n=== Model Comparison (5-Fold Stratified CV) ===")
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+models = {
+    'Logistic Reg': Pipeline([('scaler', StandardScaler()),
+                               ('model', LogisticRegression(max_iter=1000))]),
+    'KNN (k=5)': Pipeline([('scaler', StandardScaler()),
+                            ('model', KNeighborsClassifier(n_neighbors=5))]),
+    'Decision Tree': DecisionTreeClassifier(max_depth=3, random_state=42),
+}
+
+print(f"{'Model':>15} {'Mean':>8} {'Std':>8} {'Scores':>30}")
+print("-" * 65)
+
+for name, model in models.items():
+    scores = cross_val_score(model, X, y, cv=cv, scoring='accuracy')
+    scores_str = " ".join(f"{s:.2f}" for s in scores)
+    print(f"{name:>15} {scores.mean():>8.2%} {scores.std():>8.2%} [{scores_str}]")
+
+# ─── Step 6: Pipeline inside CV (preventing leakage) ───
+print(f"\n=== Pipeline + CV (no data leakage) ===")
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('model', KNeighborsClassifier(n_neighbors=5))
+])
+scores = cross_val_score(pipe, X, y, cv=cv, scoring='accuracy')
+print(f"  KNN with Pipeline CV: {scores.mean():.2%} ± {scores.std():.2%}")
+print(f"  ✅ Scaler is fit INSIDE each fold — no leakage!")
+
+# ─── Step 7: Different K values for CV ───
+print(f"\n=== Effect of Number of Folds ===")
+for k in [3, 5, 10]:
+    cv_k = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
+    scores = cross_val_score(
+        LogisticRegression(max_iter=1000), X, y, cv=cv_k)
+    print(f"  {k}-Fold: {scores.mean():.2%} ± {scores.std():.2%}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Phase 3</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>A single train/test split is unreliable — cross-validation gives a trustworthy estimate</li>
+        <li>Report mean ± std of CV scores — the std reveals model stability</li>
+        <li>Use StratifiedKFold for classification to maintain class balance</li>
+        <li>Always use Pipeline inside CV to prevent data leakage from preprocessing</li>
+        <li>CV is for evaluation — the final model should be trained on ALL data</li>
+    </ul>
+
+    <h3>🔗 Bridge to Phase 3</h3>
+    <ul>
+        <li>Phase 2 is complete — you now have the core ML toolkit: multiple models, scaling, clustering, and proper evaluation</li>
+        <li>Phase 3 starts with <strong>end-to-end feature engineering</strong> (Project 16) — handling missing values, encoding categories, and building sklearn Pipelines</li>
+        <li>The models get more powerful: regularization, ensembles, boosting, time series, NLP</li>
+        <li>Every concept from Phases 1-2 carries forward — they're the foundation for everything ahead</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_14.html">← Project 14: K-Means Clustering</a>
+    <a href="project_16.html">Project 16: Surviving the Titanic — Feature Engineering →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 35 — Multi-Label Classification — Tagging Articles With Many Labels</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 35: Multi-Label Classification — Tagging Articles With Many Labels</h1>
+<p>
+    <span class="tag">Multi-Label</span>
+    <span class="tag">MultiOutputClassifier</span>
+    <span class="tag">Label Powerset</span>
+    <span class="tag">Hamming Loss</span>
+    <span class="tag">Subset Accuracy</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 12, 28</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're building an auto-tagging system for a news platform with 8 topic categories</li>
+        <li>Each article can belong to multiple categories simultaneously — "Tech + Business," "Politics + Economy + International"</li>
+        <li>Dataset: 5,000 articles with TF-IDF features (Project 28) and binary label vectors</li>
+        <li>Standard multi-class classification (Project 12) forces exactly one label — that won't work here</li>
+        <li>Goal → predict the complete set of relevant tags for each article</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 12: decision trees classify into one of K classes — multi-class, not multi-label</li>
+        <li>Multi-label treats each label as an independent binary classification problem (binary relevance)</li>
+        <li>Or we can model label correlations — "articles about Tech are often also about Business"</li>
+        <li>Standard accuracy doesn't work — we need metrics that handle partial correctness</li>
+        <li>Use sklearn's MultiOutputClassifier and compare with classifier chains that capture label dependencies</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic multi-label data with correlated labels</li>
+        <li>Implement binary relevance (one classifier per label) using MultiOutputClassifier</li>
+        <li>Implement ClassifierChain to capture label dependencies</li>
+        <li>Compare using multi-label metrics: hamming loss, subset accuracy, macro/micro F1</li>
+        <li>Visualize label co-occurrence and per-label performance</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use hamming loss as the primary metric — it measures the fraction of incorrectly predicted labels</li>
+        <li>✅ Report both subset accuracy (exact match) and hamming loss — they tell different stories</li>
+        <li>✅ Use ClassifierChain when labels are correlated — it feeds previous label predictions as features</li>
+        <li>✅ Check label frequency distribution — rare labels need special handling (like class imbalance, Project 19)</li>
+        <li>✅ Use per-label classification reports to identify which labels are hard to predict</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use standard accuracy — it requires ALL labels to be correct (too strict for multi-label)</li>
+        <li>❌ Do NOT ignore label correlations — binary relevance treats labels independently, missing co-occurrence patterns</li>
+        <li>❌ Do NOT use multi-class classifiers directly — they predict exactly one class, not a set of labels</li>
+        <li>❌ Do NOT forget to handle rare labels — a label that appears in 2% of samples will be predicted as "absent" by default</li>
+        <li>❌ Do NOT evaluate with a single metric — hamming loss, subset accuracy, and per-label F1 each reveal different issues</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Binary Relevance (MultiOutputClassifier)</strong> → simple, fast, works when labels are independent</li>
+        <li>🔹 <strong>ClassifierChain</strong> → when labels are correlated; chains predictions as features for subsequent labels</li>
+        <li>🔹 <strong>Label Powerset</strong> → treats each unique label combination as a single class; captures all correlations but explodes with many labels</li>
+        <li>🔹 <strong>Multi-class (Project 12)</strong> → when each sample has exactly one label — not multi-label</li>
+        <li>🔹 <strong>Naive Bayes (Project 28)</strong> → fast base classifier for binary relevance on text data</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When each sample has exactly one label — use multi-class classification (Project 12)</li>
+        <li>🚫 Label Powerset with many labels — 2^L possible combinations; infeasible for L > 15</li>
+        <li>🚫 When label space is huge (thousands of labels) — use extreme multi-label methods, not standard approaches</li>
+        <li>🚫 When you need ranked labels, not binary — use learning-to-rank instead</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Multi-Label vs Multi-Class</h3>
+    <ul>
+        <li>Multi-class: y ∈ {0, 1, 2, ..., K-1} — exactly one class per sample</li>
+        <li>Multi-label: y ∈ {0, 1}^L — a binary vector of length L; multiple 1s allowed</li>
+        <li>Example: article about AI in healthcare → y = [1, 0, 1, 0, 0, 1, 0, 0] (Tech, Health, Science)</li>
+    </ul>
+
+    <h3>Binary Relevance</h3>
+    <ul>
+        <li>Train L independent binary classifiers — one per label</li>
+        <li>Classifier i predicts: "Is label i present?" (yes/no)</li>
+        <li>Simple and parallelizable — but ignores label correlations entirely</li>
+        <li>If "Tech" and "Business" always co-occur, binary relevance won't learn that</li>
+    </ul>
+
+    <h3>Classifier Chain</h3>
+    <ul>
+        <li>Train classifiers in a chain: classifier i gets original features + predictions from classifiers 1..i-1</li>
+        <li>This way, later classifiers can use earlier label predictions as additional features</li>
+        <li>Captures label dependencies: if classifier 1 predicts "Tech=1," classifier 2 for "Business" sees that</li>
+        <li>Order matters — try multiple random orderings and average (ensemble of chains)</li>
+    </ul>
+
+    <h3>Label Powerset</h3>
+    <ul>
+        <li>Treat each unique label combination as a single class</li>
+        <li>If labels are [Tech, Business, Health], possible classes: (0,0,0), (1,0,0), (0,1,0), (1,1,0), ...</li>
+        <li>Naturally captures all label correlations — but 2^L possible classes</li>
+        <li>Practical only for small L (≤10-12 labels) and when many combinations actually appear in data</li>
+    </ul>
+
+    <h3>Multi-Label Metrics</h3>
+    <ul>
+        <li><strong>Hamming Loss</strong>: fraction of labels that are incorrectly predicted (lower is better)</li>
+        <li><strong>Subset Accuracy</strong>: fraction of samples where ALL labels are correct (very strict)</li>
+        <li><strong>Micro F1</strong>: pool all label predictions together, compute F1 — favors frequent labels</li>
+        <li><strong>Macro F1</strong>: compute F1 per label, then average — treats all labels equally</li>
+        <li><strong>Sample F1</strong>: compute F1 per sample, then average — measures per-sample quality</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Using accuracy instead of hamming loss</strong> — accuracy requires exact match of all labels; hamming loss gives partial credit</li>
+        <li>⚠️ <strong>Ignoring rare labels</strong> — a label present in 1% of samples gets predicted as "absent" always; use class_weight or oversampling per label</li>
+        <li>⚠️ <strong>Wrong chain order</strong> — ClassifierChain performance depends on label ordering; use ensemble of random orders</li>
+        <li>⚠️ <strong>Label Powerset on many labels</strong> — with 20 labels, you'd have up to 1M classes; use binary relevance or chains instead</li>
+        <li>⚠️ <strong>Not checking label correlations</strong> — if labels are truly independent, ClassifierChain adds complexity without benefit</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Binary Relevance: trains L independent models — embarrassingly parallel, scales linearly with L</li>
+        <li>ClassifierChain: sequential by nature — L models trained one after another; harder to parallelize</li>
+        <li>Label Powerset: exponential in L — only practical for small label spaces</li>
+        <li>For extreme multi-label (thousands of labels), use specialized methods like FastXML or embedding-based approaches</li>
+        <li>TF-IDF features (Project 28) can be very high-dimensional — use sparse matrices and linear classifiers for speed</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Binary Relevance is the most interpretable — each label has its own model you can inspect independently</li>
+        <li>✅ Per-label feature importance shows which words predict each topic (using text features from Project 28)</li>
+        <li>⚠️ ClassifierChain is harder to interpret — predictions depend on the chain order and previous predictions</li>
+        <li>⚠️ Label Powerset treats combinations as atomic classes — loses per-label interpretability</li>
+        <li>⚠️ For stakeholders, show per-label confidence scores, not just binary predictions</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import make_multilabel_classification
+from sklearn.model_selection import train_test_split
+from sklearn.multioutput import MultiOutputClassifier, ClassifierChain
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (hamming_loss, accuracy_score, f1_score,
+                              classification_report, multilabel_confusion_matrix)
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Generate multi-label dataset ───
+np.random.seed(42)
+X, Y = make_multilabel_classification(
+    n_samples=5000, n_features=30, n_classes=8, n_labels=2.5,
+    allow_unlabeled=False, random_state=42
+)
+
+label_names = ['Tech', 'Business', 'Politics', 'Health', 'Sports', 'Science', 'Entertainment', 'Economy']
+
+X_train, X_test, Y_train, Y_test = train_test_split(
+    X, Y, test_size=0.2, random_state=42)
+
+print(f"=== Multi-Label Dataset ===")
+print(f"  Samples: {X.shape[0]}, Features: {X.shape[1]}, Labels: {Y.shape[1]}")
+print(f"  Avg labels per sample: {Y.sum(axis=1).mean():.1f}")
+print(f"\n  Label frequencies:")
+for i, name in enumerate(label_names):
+    freq = Y[:, i].mean()
+    print(f"    {name:<15}: {freq:.1%}")
+
+# ─── Step 2: Binary Relevance (MultiOutputClassifier) ───
+print(f"\n=== Strategy 1: Binary Relevance ===")
+br_clf = MultiOutputClassifier(
+    LogisticRegression(max_iter=1000, random_state=42), n_jobs=-1)
+br_clf.fit(X_train, Y_train)
+br_pred = br_clf.predict(X_test)
+
+br_hamming = hamming_loss(Y_test, br_pred)
+br_subset = accuracy_score(Y_test, br_pred)
+br_micro_f1 = f1_score(Y_test, br_pred, average='micro')
+br_macro_f1 = f1_score(Y_test, br_pred, average='macro')
+
+print(f"  Hamming Loss:    {br_hamming:.4f}")
+print(f"  Subset Accuracy: {br_subset:.4f}")
+print(f"  Micro F1:        {br_micro_f1:.4f}")
+print(f"  Macro F1:        {br_macro_f1:.4f}")
+
+# ─── Step 3: Classifier Chain ───
+print(f"\n=== Strategy 2: Classifier Chain ===")
+cc_clf = ClassifierChain(
+    LogisticRegression(max_iter=1000, random_state=42), order='random', random_state=42)
+cc_clf.fit(X_train, Y_train)
+cc_pred = cc_clf.predict(X_test)
+
+cc_hamming = hamming_loss(Y_test, cc_pred)
+cc_subset = accuracy_score(Y_test, cc_pred)
+cc_micro_f1 = f1_score(Y_test, cc_pred, average='micro')
+cc_macro_f1 = f1_score(Y_test, cc_pred, average='macro')
+
+print(f"  Hamming Loss:    {cc_hamming:.4f}")
+print(f"  Subset Accuracy: {cc_subset:.4f}")
+print(f"  Micro F1:        {cc_micro_f1:.4f}")
+print(f"  Macro F1:        {cc_macro_f1:.4f}")
+
+# ─── Step 4: Ensemble of Classifier Chains ───
+print(f"\n=== Strategy 3: Ensemble of 10 Classifier Chains ===")
+chains = [ClassifierChain(LogisticRegression(max_iter=1000, random_state=42),
+                          order='random', random_state=i)
+          for i in range(10)]
+
+for chain in chains:
+    chain.fit(X_train, Y_train)
+
+# Average predictions across chains
+chain_preds = np.array([chain.predict(X_test) for chain in chains])
+ensemble_pred = (chain_preds.mean(axis=0) >= 0.5).astype(int)
+
+ens_hamming = hamming_loss(Y_test, ensemble_pred)
+ens_subset = accuracy_score(Y_test, ensemble_pred)
+ens_micro_f1 = f1_score(Y_test, ensemble_pred, average='micro')
+ens_macro_f1 = f1_score(Y_test, ensemble_pred, average='macro')
+
+print(f"  Hamming Loss:    {ens_hamming:.4f}")
+print(f"  Subset Accuracy: {ens_subset:.4f}")
+print(f"  Micro F1:        {ens_micro_f1:.4f}")
+print(f"  Macro F1:        {ens_macro_f1:.4f}")
+
+# ─── Step 5: Binary Relevance with Random Forest ───
+print(f"\n=== Strategy 4: Binary Relevance (Random Forest) ===")
+br_rf = MultiOutputClassifier(
+    RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1))
+br_rf.fit(X_train, Y_train)
+rf_pred = br_rf.predict(X_test)
+
+rf_hamming = hamming_loss(Y_test, rf_pred)
+rf_subset = accuracy_score(Y_test, rf_pred)
+rf_micro_f1 = f1_score(Y_test, rf_pred, average='micro')
+rf_macro_f1 = f1_score(Y_test, rf_pred, average='macro')
+
+print(f"  Hamming Loss:    {rf_hamming:.4f}")
+print(f"  Subset Accuracy: {rf_subset:.4f}")
+print(f"  Micro F1:        {rf_micro_f1:.4f}")
+print(f"  Macro F1:        {rf_macro_f1:.4f}")
+
+# ─── Step 6: Per-label performance ───
+print(f"\n=== Per-Label F1 Scores (Best Model) ===")
+best_pred = ensemble_pred
+for i, name in enumerate(label_names):
+    f1 = f1_score(Y_test[:, i], best_pred[:, i])
+    support = Y_test[:, i].sum()
+    print(f"  {name:<15}: F1 = {f1:.4f}  (support: {int(support)})")
+
+# ─── Step 7: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Strategy comparison
+strategies = ['Binary Rel\n(LogReg)', 'Classifier\nChain', 'Ensemble\nChains', 'Binary Rel\n(RF)']
+hammings = [br_hamming, cc_hamming, ens_hamming, rf_hamming]
+subsets = [br_subset, cc_subset, ens_subset, rf_subset]
+micro_f1s = [br_micro_f1, cc_micro_f1, ens_micro_f1, rf_micro_f1]
+
+x = np.arange(len(strategies))
+width = 0.25
+axes[0, 0].bar(x - width, micro_f1s, width, label='Micro F1', color='#58a6ff')
+axes[0, 0].bar(x, subsets, width, label='Subset Acc', color='#3fb950')
+axes[0, 0].bar(x + width, [1-h for h in hammings], width, label='1 - Hamming', color='#f0883e')
+axes[0, 0].set_xticks(x)
+axes[0, 0].set_xticklabels(strategies, fontsize=9)
+axes[0, 0].set_ylabel('Score')
+axes[0, 0].set_title('Strategy Comparison')
+axes[0, 0].legend(fontsize=8)
+axes[0, 0].grid(True, alpha=0.2, axis='y')
+
+# Per-label F1
+per_label_f1 = [f1_score(Y_test[:, i], best_pred[:, i]) for i in range(len(label_names))]
+colors = ['#3fb950' if f > 0.6 else '#f0883e' if f > 0.4 else '#f85149' for f in per_label_f1]
+axes[0, 1].barh(label_names, per_label_f1, color=colors, edgecolor='white', alpha=0.8)
+axes[0, 1].set_xlabel('F1 Score')
+axes[0, 1].set_title('Per-Label F1 (Ensemble Chains)')
+axes[0, 1].grid(True, alpha=0.2, axis='x')
+
+# Label co-occurrence matrix
+cooccurrence = Y_train.T @ Y_train
+np.fill_diagonal(cooccurrence, 0)
+cooccurrence = cooccurrence / cooccurrence.max()
+im = axes[1, 0].imshow(cooccurrence, cmap='YlOrRd')
+axes[1, 0].set_xticks(range(len(label_names)))
+axes[1, 0].set_yticks(range(len(label_names)))
+axes[1, 0].set_xticklabels(label_names, rotation=45, ha='right', fontsize=8)
+axes[1, 0].set_yticklabels(label_names, fontsize=8)
+axes[1, 0].set_title('Label Co-occurrence')
+plt.colorbar(im, ax=axes[1, 0])
+
+# Label count distribution
+label_counts = Y_test.sum(axis=1)
+axes[1, 1].hist(label_counts, bins=range(int(label_counts.max()) + 2),
+                color='#58a6ff', edgecolor='white', alpha=0.8, align='left')
+axes[1, 1].set_xlabel('Number of Labels per Sample')
+axes[1, 1].set_ylabel('Count')
+axes[1, 1].set_title('Label Count Distribution')
+axes[1, 1].grid(True, alpha=0.2, axis='y')
+
+plt.tight_layout()
+plt.savefig('project_35_multilabel.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Multi-label analysis saved as project_35_multilabel.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Multi-label classification predicts a SET of labels per sample — fundamentally different from multi-class (Project 12)</li>
+        <li>Binary Relevance is simple but ignores label correlations; ClassifierChain captures dependencies</li>
+        <li>Ensemble of chains with random orderings is the most robust approach</li>
+        <li>Use hamming loss (partial credit) and subset accuracy (exact match) together — they tell different stories</li>
+        <li>Rare labels need the same attention as minority classes in imbalanced classification (Project 19)</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 36</h3>
+    <ul>
+        <li>We've handled multiple labels per sample — now what about multiple related time series?</li>
+        <li>Project 36 introduces <strong>hierarchical time series forecasting</strong> — predicting at store, region, and national level simultaneously</li>
+        <li>The challenge: forecasts at different levels must be coherent (store forecasts should sum to the region forecast)</li>
+        <li>We'll build on the time series foundations from Projects 25 and 26</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_34.html">← Project 34: Anomaly Detection</a>
+    <a href="project_36.html">Project 36: Hierarchical Time Series →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

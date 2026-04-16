@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 33 — Calibrating Probability Outputs — Trust Your Model's Confidence</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 33: Calibrating Probability Outputs — Trust Your Model's Confidence</h1>
+<p>
+    <span class="tag">Calibration</span>
+    <span class="tag">Platt Scaling</span>
+    <span class="tag">Isotonic Regression</span>
+    <span class="tag">Reliability Diagram</span>
+    <span class="tag">CalibratedClassifierCV</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 10, 32</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're building a medical screening system that flags patients for follow-up based on disease risk probability</li>
+        <li>Your stacking ensemble (Project 32) achieves 0.92 AUC — excellent discrimination</li>
+        <li>But when the model says "70% risk," only 45% of those patients actually have the disease</li>
+        <li>Doctors need trustworthy probabilities to make treatment decisions — not just rankings</li>
+        <li>Goal → calibrate the model so that predicted probabilities match observed frequencies</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 10: logistic regression outputs probabilities via the sigmoid — these are naturally well-calibrated</li>
+        <li>Tree-based models and SVMs often produce poorly calibrated probabilities despite good AUC</li>
+        <li>A reliability diagram (calibration curve) reveals the gap between predicted and actual probabilities</li>
+        <li>Calibration methods (Platt scaling, isotonic regression) fix the mapping without changing the model's ranking</li>
+        <li>Use CalibratedClassifierCV to apply calibration with proper cross-validation</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Train several classifiers and plot their reliability diagrams</li>
+        <li>Measure calibration error (Brier score, Expected Calibration Error)</li>
+        <li>Apply Platt scaling (sigmoid) and isotonic regression calibration</li>
+        <li>Compare before/after calibration on reliability diagrams</li>
+        <li>Show that calibration improves probability quality without hurting AUC</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always check calibration when probabilities drive decisions — not just when AUC matters</li>
+        <li>✅ Use reliability diagrams as the primary diagnostic — visual and intuitive</li>
+        <li>✅ Use CalibratedClassifierCV with <code>cv=5</code> — it handles the train/calibration split properly</li>
+        <li>✅ Prefer isotonic regression when you have enough data (>1,000 samples) — more flexible than Platt</li>
+        <li>✅ Report Brier score alongside AUC — Brier measures both discrimination AND calibration</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT assume good AUC means good calibration — AUC only measures ranking, not probability quality</li>
+        <li>❌ Do NOT calibrate on the training set — use a held-out calibration set or cross-validation</li>
+        <li>❌ Do NOT use isotonic regression on tiny datasets — it overfits; use Platt (sigmoid) instead</li>
+        <li>❌ Do NOT calibrate logistic regression — it's already well-calibrated by design (Project 10)</li>
+        <li>❌ Do NOT expect calibration to improve AUC — it fixes probability quality, not ranking ability</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Platt scaling (sigmoid)</strong> → when calibration curve is S-shaped; works well with small datasets; 2 parameters</li>
+        <li>🔹 <strong>Isotonic regression</strong> → when calibration curve is non-monotonic or complex; needs more data; non-parametric</li>
+        <li>🔹 <strong>No calibration needed</strong> → logistic regression, well-tuned neural networks (already calibrated)</li>
+        <li>🔹 <strong>Calibration essential</strong> → Random Forest, SVM, GBM, stacking ensembles — all tend to be miscalibrated</li>
+        <li>🔹 <strong>Temperature scaling</strong> → popular in deep learning; single parameter; similar to Platt but simpler</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you only care about ranking (AUC) — calibration doesn't change the order of predictions</li>
+        <li>🚫 When your model is already well-calibrated — check the reliability diagram first</li>
+        <li>🚫 When you have very few samples — isotonic regression will overfit; even Platt may be unreliable</li>
+        <li>🚫 When the decision threshold is fixed — if you always threshold at 0.5, calibration doesn't change the outcome</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>What Is Calibration?</h3>
+    <ul>
+        <li>A model is calibrated if: among all samples where it predicts P(y=1) = 0.7, exactly 70% are actually positive</li>
+        <li>Formally: P(Y=1 | f(X)=p) = p for all p ∈ [0, 1]</li>
+        <li>Calibration is about the absolute quality of probabilities, not their relative ordering</li>
+        <li>A perfectly calibrated model with AUC=0.6 is more useful for decision-making than an uncalibrated model with AUC=0.9</li>
+    </ul>
+
+    <h3>Reliability Diagram — How to Read It</h3>
+    <ul>
+        <li>Bin predictions into groups (e.g., 0.0-0.1, 0.1-0.2, ..., 0.9-1.0)</li>
+        <li>For each bin: x-axis = mean predicted probability, y-axis = actual fraction of positives</li>
+        <li>Perfect calibration = diagonal line (predicted matches actual)</li>
+        <li>Above diagonal = model is underconfident (predicts 0.3 but actual rate is 0.5)</li>
+        <li>Below diagonal = model is overconfident (predicts 0.8 but actual rate is 0.5)</li>
+    </ul>
+
+    <h3>Platt Scaling (Sigmoid Calibration)</h3>
+    <ul>
+        <li>Fits a logistic regression on the model's raw scores: <code>P_calibrated = 1 / (1 + exp(-(a * f(x) + b)))</code></li>
+        <li>Only 2 parameters (a, b) — low risk of overfitting</li>
+        <li>Assumes the calibration curve is sigmoid-shaped — works well for SVMs and boosted models</li>
+        <li>Originally proposed by John Platt for calibrating SVM outputs</li>
+    </ul>
+
+    <h3>Isotonic Regression Calibration</h3>
+    <ul>
+        <li>Fits a non-decreasing step function mapping raw scores to calibrated probabilities</li>
+        <li>Non-parametric — can fix any shape of miscalibration</li>
+        <li>More flexible than Platt but needs more data to avoid overfitting</li>
+        <li>Preserves the ranking (monotonic) — AUC is unchanged after calibration</li>
+    </ul>
+
+    <h3>Brier Score and ECE</h3>
+    <ul>
+        <li>Brier score: <code>BS = mean((p_predicted - y_actual)²)</code> — lower is better; measures both calibration and discrimination</li>
+        <li>Expected Calibration Error (ECE): weighted average of |predicted - actual| across bins</li>
+        <li>Brier score decomposes into: calibration error + refinement (discrimination) + uncertainty</li>
+        <li>A model can have low Brier score with bad calibration if discrimination is excellent — check both</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Calibrating on training data</strong> — the model's training predictions are overconfident; always use held-out data</li>
+        <li>⚠️ <strong>Isotonic on small data</strong> — with &lt;500 calibration samples, isotonic regression creates a jagged, overfit mapping</li>
+        <li>⚠️ <strong>Confusing AUC with calibration</strong> — AUC=0.95 doesn't mean probabilities are trustworthy</li>
+        <li>⚠️ <strong>Too few bins in reliability diagram</strong> — 10 bins is standard; too few hides miscalibration, too many is noisy</li>
+        <li>⚠️ <strong>Calibrating after threshold selection</strong> — calibrate first, then choose the threshold on calibrated probabilities</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Calibration is cheap — Platt scaling fits 2 parameters; isotonic regression is O(n log n)</li>
+        <li>CalibratedClassifierCV with cv=5 retrains the base model 5 times — the bottleneck is the base model, not calibration</li>
+        <li>At inference, calibration adds negligible overhead — one sigmoid or one lookup in a step function</li>
+        <li>For very large datasets, <code>method='prefit'</code> lets you calibrate a pre-trained model without retraining</li>
+        <li>Calibration should be refreshed when the data distribution shifts — monitor with reliability diagrams in production</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Calibrated probabilities are directly interpretable: "This patient has a 73% risk" means something concrete</li>
+        <li>✅ Reliability diagrams are intuitive for non-technical stakeholders — "the dots should be on the line"</li>
+        <li>✅ Brier score is easy to explain: "average squared error of our probability predictions"</li>
+        <li>⚠️ Calibration doesn't explain WHY the model predicts a certain probability — use SHAP (Project 27) for that</li>
+        <li>⚠️ In medical/legal contexts, calibrated probabilities carry more weight than raw model scores</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+from sklearn.metrics import brier_score_loss, roc_auc_score, log_loss
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Dataset ───
+np.random.seed(42)
+X, y = make_classification(n_samples=8000, n_features=20,
+                           n_informative=10, n_redundant=5,
+                           flip_y=0.03, random_state=42)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, stratify=y, random_state=42)
+
+print(f"=== Dataset ===")
+print(f"  Train: {X_train.shape[0]}, Test: {X_test.shape[0]}")
+
+# ─── Step 2: Train models with different calibration properties ───
+models = {
+    'Logistic Regression': LogisticRegression(max_iter=1000, random_state=42),
+    'Random Forest': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42),
+    'Gradient Boosting': GradientBoostingClassifier(n_estimators=200, learning_rate=0.1, random_state=42),
+    'SVM (RBF)': SVC(probability=True, kernel='rbf', random_state=42),
+}
+
+print(f"\n=== Before Calibration ===")
+print(f"{'Model':<25} {'AUC':>8} {'Brier':>8} {'Log Loss':>10}")
+print(f"{'-'*55}")
+
+uncalibrated_results = {}
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    probs = model.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, probs)
+    brier = brier_score_loss(y_test, probs)
+    ll = log_loss(y_test, probs)
+    uncalibrated_results[name] = {'probs': probs, 'auc': auc, 'brier': brier, 'logloss': ll}
+    print(f"{name:<25} {auc:>8.4f} {brier:>8.4f} {ll:>10.4f}")
+
+# ─── Step 3: Apply calibration ───
+print(f"\n=== After Calibration (Platt Scaling) ===")
+print(f"{'Model':<25} {'AUC':>8} {'Brier':>8} {'Log Loss':>10}")
+print(f"{'-'*55}")
+
+platt_results = {}
+for name, model in models.items():
+    cal_model = CalibratedClassifierCV(model, method='sigmoid', cv=5)
+    cal_model.fit(X_train, y_train)
+    probs = cal_model.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, probs)
+    brier = brier_score_loss(y_test, probs)
+    ll = log_loss(y_test, probs)
+    platt_results[name] = {'probs': probs, 'auc': auc, 'brier': brier, 'logloss': ll}
+    print(f"{name:<25} {auc:>8.4f} {brier:>8.4f} {ll:>10.4f}")
+
+print(f"\n=== After Calibration (Isotonic Regression) ===")
+print(f"{'Model':<25} {'AUC':>8} {'Brier':>8} {'Log Loss':>10}")
+print(f"{'-'*55}")
+
+isotonic_results = {}
+for name, model in models.items():
+    cal_model = CalibratedClassifierCV(model, method='isotonic', cv=5)
+    cal_model.fit(X_train, y_train)
+    probs = cal_model.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, probs)
+    brier = brier_score_loss(y_test, probs)
+    ll = log_loss(y_test, probs)
+    isotonic_results[name] = {'probs': probs, 'auc': auc, 'brier': brier, 'logloss': ll}
+    print(f"{name:<25} {auc:>8.4f} {brier:>8.4f} {ll:>10.4f}")
+
+# ─── Step 4: Reliability diagrams ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+axes = axes.flatten()
+
+for idx, (name, _) in enumerate(models.items()):
+    ax = axes[idx]
+
+    # Uncalibrated
+    prob_true_unc, prob_pred_unc = calibration_curve(
+        y_test, uncalibrated_results[name]['probs'], n_bins=10, strategy='uniform')
+    ax.plot(prob_pred_unc, prob_true_unc, 's-', color='#f85149', label='Uncalibrated', linewidth=2)
+
+    # Platt
+    prob_true_pl, prob_pred_pl = calibration_curve(
+        y_test, platt_results[name]['probs'], n_bins=10, strategy='uniform')
+    ax.plot(prob_pred_pl, prob_true_pl, 'o-', color='#58a6ff', label='Platt (sigmoid)', linewidth=2)
+
+    # Isotonic
+    prob_true_iso, prob_pred_iso = calibration_curve(
+        y_test, isotonic_results[name]['probs'], n_bins=10, strategy='uniform')
+    ax.plot(prob_pred_iso, prob_true_iso, '^-', color='#3fb950', label='Isotonic', linewidth=2)
+
+    # Perfect calibration line
+    ax.plot([0, 1], [0, 1], '--', color='#c9d1d9', alpha=0.5, label='Perfect')
+
+    ax.set_xlabel('Mean Predicted Probability')
+    ax.set_ylabel('Fraction of Positives')
+    ax.set_title(f'{name}')
+    ax.legend(loc='lower right', fontsize=8)
+    ax.grid(True, alpha=0.2)
+    ax.set_xlim(-0.05, 1.05)
+    ax.set_ylim(-0.05, 1.05)
+
+plt.suptitle('Reliability Diagrams — Before and After Calibration', fontsize=14, color='#58a6ff')
+plt.tight_layout()
+plt.savefig('project_33_calibration.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Reliability diagrams saved as project_33_calibration.png")
+
+# ─── Step 5: Brier score improvement summary ───
+print(f"\n=== Brier Score Improvement Summary ===")
+print(f"{'Model':<25} {'Before':>8} {'Platt':>8} {'Isotonic':>8} {'Best Δ':>8}")
+print(f"{'-'*60}")
+for name in models:
+    before = uncalibrated_results[name]['brier']
+    platt = platt_results[name]['brier']
+    iso = isotonic_results[name]['brier']
+    best_after = min(platt, iso)
+    delta = before - best_after
+    print(f"{name:<25} {before:>8.4f} {platt:>8.4f} {iso:>8.4f} {delta:>+8.4f}")
+
+# ─── Step 6: ECE calculation ───
+def expected_calibration_error(y_true, y_prob, n_bins=10):
+    bin_edges = np.linspace(0, 1, n_bins + 1)
+    ece = 0.0
+    for i in range(n_bins):
+        mask = (y_prob >= bin_edges[i]) & (y_prob < bin_edges[i+1])
+        if mask.sum() == 0:
+            continue
+        bin_acc = y_true[mask].mean()
+        bin_conf = y_prob[mask].mean()
+        ece += mask.sum() * abs(bin_acc - bin_conf)
+    return ece / len(y_true)
+
+print(f"\n=== Expected Calibration Error (ECE) ===")
+for name in models:
+    ece_before = expected_calibration_error(y_test, uncalibrated_results[name]['probs'])
+    ece_platt = expected_calibration_error(y_test, platt_results[name]['probs'])
+    ece_iso = expected_calibration_error(y_test, isotonic_results[name]['probs'])
+    print(f"  {name:<25} Before: {ece_before:.4f}  Platt: {ece_platt:.4f}  Isotonic: {ece_iso:.4f}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Calibration ensures predicted probabilities match observed frequencies — critical when decisions depend on confidence</li>
+        <li>Good AUC ≠ good calibration — always check the reliability diagram</li>
+        <li>Platt scaling (2 parameters) is safe for small data; isotonic regression (non-parametric) is more flexible for large data</li>
+        <li>CalibratedClassifierCV handles the train/calibration split via cross-validation — no manual splitting needed</li>
+        <li>Logistic regression (Project 10) is naturally well-calibrated; tree ensembles and SVMs usually need calibration</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 34</h3>
+    <ul>
+        <li>So far, all our models classify into known categories — but what about data points that don't belong to any category?</li>
+        <li>Project 34 introduces <strong>anomaly detection</strong> — finding the unusual, the unexpected, the outliers</li>
+        <li>Instead of "which class?" we ask "is this normal or abnormal?"</li>
+        <li>We'll use Isolation Forest to detect anomalies in server logs — a fundamentally different modeling paradigm</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_32.html">← Project 32: Stacking Models</a>
+    <a href="project_34.html">Project 34: Anomaly Detection →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

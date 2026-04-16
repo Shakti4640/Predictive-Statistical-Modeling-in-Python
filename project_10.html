@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 10 — Diagnosing Medical Risk — Logistic Regression With Multiple Predictors</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 2 — Easy</span>
+<h1>Project 10: Diagnosing Medical Risk — Logistic Regression With Multiple Predictors</h1>
+<p>
+    <span class="tag">Multivariate logistic regression</span>
+    <span class="tag">precision/recall</span>
+    <span class="tag">ROC-AUC</span>
+    <span class="tag">classification report</span>
+</p>
+<p class="difficulty">Difficulty: Easy &nbsp;|&nbsp; Builds on: Projects 6, 8</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work at a hospital's data team</li>
+        <li>Doctors ask: <strong>"Given a patient's age, BMI, blood pressure, and cholesterol, what's their risk of heart disease?"</strong></li>
+        <li>Project 6 used ONE feature — now we use MULTIPLE features for classification</li>
+        <li>We need a metric that doesn't depend on the threshold choice — enter ROC-AUC</li>
+        <li>Medical context: false negatives (missing a sick patient) are far worse than false positives</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Extend logistic regression (Project 6) to multiple features — same as Project 9 did for linear regression</li>
+        <li>Use the full classification toolkit: confusion matrix (Project 4), precision, recall, F1</li>
+        <li>Introduce ROC curve and AUC — evaluates the model across ALL possible thresholds</li>
+        <li>Compare different threshold choices and their medical implications</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic patient data (4 features → heart disease risk)</li>
+        <li>Fit multivariate logistic regression</li>
+        <li>Generate classification report (precision, recall, F1 per class)</li>
+        <li>Plot ROC curve and compute AUC</li>
+        <li>Show how different thresholds affect precision/recall tradeoff</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use ROC-AUC as the primary metric — it's threshold-independent</li>
+        <li>✅ Use classification_report for a complete per-class breakdown</li>
+        <li>✅ In medical contexts, prioritize recall (sensitivity) — don't miss sick patients</li>
+        <li>✅ Plot the ROC curve — it shows the tradeoff between true positive rate and false positive rate</li>
+        <li>✅ Compare with a random baseline (AUC = 0.5) — your model must beat random</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use accuracy alone in medical settings — missing 10% of sick patients is unacceptable even with 90% accuracy</li>
+        <li>❌ Do NOT ignore the ROC curve shape — a curve that hugs the top-left corner is excellent</li>
+        <li>❌ Do NOT compare AUC across very different datasets — AUC depends on the difficulty of the problem</li>
+        <li>❌ Do NOT forget that logistic regression still assumes a linear decision boundary in feature space</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>ROC-AUC</strong> → when you want a threshold-independent metric for binary classification</li>
+        <li>🔹 <strong>Precision-Recall curve</strong> → better than ROC for imbalanced datasets (Project 19)</li>
+        <li>🔹 <strong>Classification report</strong> → for a complete summary of precision, recall, F1 per class</li>
+        <li>🔹 <strong>Recall-focused threshold</strong> → in medical/safety contexts where missing positives is costly</li>
+        <li>🔹 <strong>Precision-focused threshold</strong> → when false alarms are costly (spam filtering from Project 4)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 ROC-AUC can be misleading with highly imbalanced data — use PR-AUC instead (Project 19)</li>
+        <li>🚫 AUC = 0.5 doesn't always mean "random" — it can happen with informative features if the model is wrong</li>
+        <li>🚫 Logistic regression with multiple features still can't capture nonlinear interactions without feature engineering</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Multivariate Logistic Regression</h3>
+    <ul>
+        <li><code>P(disease) = sigmoid(w₁·age + w₂·BMI + w₃·BP + w₄·chol + w₀)</code></li>
+        <li>Same sigmoid from Project 6, but the linear part now has multiple features</li>
+        <li>Each coefficient = change in log-odds per unit change in that feature (holding others constant)</li>
+    </ul>
+
+    <h3>ROC Curve</h3>
+    <ul>
+        <li>X-axis: False Positive Rate (FPR) = FP / (FP + TN)</li>
+        <li>Y-axis: True Positive Rate (TPR) = TP / (TP + FN) = Recall</li>
+        <li>Each point on the curve = one threshold value</li>
+        <li>The curve shows ALL possible precision-recall tradeoffs</li>
+        <li>Diagonal line = random classifier (AUC = 0.5)</li>
+    </ul>
+
+    <h3>AUC — Area Under the ROC Curve</h3>
+    <ul>
+        <li>AUC = probability that the model ranks a random positive higher than a random negative</li>
+        <li>AUC = 1.0 → perfect separation</li>
+        <li>AUC = 0.5 → no better than random</li>
+        <li>AUC = 0.8-0.9 → good model for most applications</li>
+        <li>AUC is threshold-independent — it evaluates the model's ranking ability</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Optimizing accuracy in medical settings</strong> — recall is almost always more important</li>
+        <li>⚠️ <strong>Reporting AUC without the ROC curve</strong> — the curve shape matters (a bumpy curve with AUC=0.8 is worse than a smooth one)</li>
+        <li>⚠️ <strong>Not considering class imbalance</strong> — if 5% have disease, accuracy of 95% is trivial</li>
+        <li>⚠️ <strong>Forgetting to standardize features</strong> — age (20-80) and cholesterol (100-300) are on different scales</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Same as Project 6 — logistic regression scales well to large datasets</li>
+        <li>ROC curve computation is O(n log n) — sorting predictions</li>
+        <li>With many features (100+), consider regularization (Project 17-18)</li>
+        <li>Classification report is O(n) — trivial</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Odds ratios per feature: "each 10-point increase in cholesterol multiplies disease odds by 1.2x"</li>
+        <li>✅ ROC curve is visual and intuitive for stakeholders</li>
+        <li>✅ Probability output: "this patient has a 78% risk" — actionable for doctors</li>
+        <li>⚠️ With many features, individual coefficient interpretation becomes harder</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (classification_report, confusion_matrix,
+                             roc_auc_score, roc_curve, accuracy_score)
+from sklearn.preprocessing import StandardScaler
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic patient data ───
+np.random.seed(42)
+n = 400
+
+age = np.random.uniform(25, 75, n)
+bmi = np.random.uniform(18, 40, n)
+blood_pressure = np.random.uniform(90, 180, n)
+cholesterol = np.random.uniform(150, 300, n)
+
+# True risk model
+log_odds = (-8 + 0.05 * age + 0.08 * bmi + 0.02 * blood_pressure
+            + 0.01 * cholesterol + np.random.normal(0, 0.5, n))
+prob = 1 / (1 + np.exp(-log_odds))
+disease = (np.random.random(n) < prob).astype(int)
+
+df = pd.DataFrame({
+    'age': age, 'bmi': bmi, 'blood_pressure': blood_pressure,
+    'cholesterol': cholesterol, 'disease': disease
+})
+
+print(f"=== Data Summary ===")
+print(f"  Patients: {n} | Disease: {disease.sum()} ({disease.mean():.1%})")
+
+# ─── Step 2: Prepare and split ───
+features = ['age', 'bmi', 'blood_pressure', 'cholesterol']
+X = df[features].values
+y = df['disease'].values
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Standardize features (important for coefficient comparison)
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+# ─── Step 3: Fit multivariate logistic regression ───
+model = LogisticRegression(random_state=42, max_iter=1000)
+model.fit(X_train_s, y_train)
+
+print(f"\n=== Coefficients (standardized) ===")
+for feat, coef in zip(features, model.coef_[0]):
+    odds_ratio = np.exp(coef)
+    print(f"  {feat:>16}: coef={coef:+.4f}  odds_ratio={odds_ratio:.3f}")
+
+# ─── Step 4: Predictions and probabilities ───
+y_pred = model.predict(X_test_s)
+y_proba = model.predict_proba(X_test_s)[:, 1]
+
+# ─── Step 5: Classification Report ───
+print(f"\n=== Classification Report ===")
+print(classification_report(y_test, y_pred, target_names=['Healthy', 'Disease']))
+
+acc = accuracy_score(y_test, y_pred)
+auc = roc_auc_score(y_test, y_proba)
+print(f"  Accuracy: {acc:.2%}")
+print(f"  ROC-AUC:  {auc:.4f}")
+
+# ─── Step 6: ROC Curve ───
+fpr, tpr, thresholds_roc = roc_curve(y_test, y_proba)
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+ax1 = axes[0]
+ax1.plot(fpr, tpr, color='#58a6ff', linewidth=2, label=f'Model (AUC={auc:.3f})')
+ax1.plot([0, 1], [0, 1], color='#f85149', linestyle='--', label='Random (AUC=0.5)')
+ax1.set_xlabel('False Positive Rate')
+ax1.set_ylabel('True Positive Rate (Recall)')
+ax1.set_title('ROC Curve')
+ax1.legend()
+ax1.grid(True, alpha=0.2)
+
+# ─── Step 7: Threshold analysis ───
+ax2 = axes[1]
+thresholds_demo = [0.3, 0.4, 0.5, 0.6, 0.7]
+precisions, recalls = [], []
+
+print(f"\n=== Threshold Analysis (Medical Context) ===")
+print(f"{'Threshold':>10} {'Accuracy':>10} {'Recall':>8} {'Precision':>10} {'Missed':>8}")
+print("-" * 50)
+
+for t in thresholds_demo:
+    preds_t = (y_proba >= t).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_test, preds_t).ravel()
+    prec = tp / (tp + fp) if (tp + fp) > 0 else 0
+    rec = tp / (tp + fn) if (tp + fn) > 0 else 0
+    acc_t = (tp + tn) / (tp + fp + tn + fn)
+    precisions.append(prec)
+    recalls.append(rec)
+    print(f"{t:>10.1f} {acc_t:>10.2%} {rec:>8.2%} {prec:>10.2%} {fn:>8}")
+
+ax2.plot(thresholds_demo, recalls, 'o-', color='#3fb950', label='Recall')
+ax2.plot(thresholds_demo, precisions, 's-', color='#f0883e', label='Precision')
+ax2.set_xlabel('Threshold')
+ax2.set_ylabel('Score')
+ax2.set_title('Precision-Recall vs Threshold')
+ax2.legend()
+ax2.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_10_roc.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Plots saved as project_10_roc.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Multivariate logistic regression uses multiple features to predict probabilities</li>
+        <li>ROC-AUC evaluates the model across ALL thresholds — threshold-independent</li>
+        <li>In medical contexts, recall (sensitivity) is usually more important than precision</li>
+        <li>Classification report gives a complete per-class breakdown of precision, recall, F1</li>
+        <li>Standardize features before fitting — makes coefficients comparable</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 11</h3>
+    <ul>
+        <li>Logistic regression draws a LINEAR boundary between classes</li>
+        <li>What if the boundary is curved or complex?</li>
+        <li>Project 11 introduces <strong>K-Nearest Neighbors (KNN)</strong> — a model that makes NO assumptions about the boundary shape</li>
+        <li>KNN classifies by looking at the K closest training points — simple but powerful</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_09.html">← Project 9: Multiple Regression</a>
+    <a href="project_11.html">Project 11: Classifying Iris Flowers — KNN →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

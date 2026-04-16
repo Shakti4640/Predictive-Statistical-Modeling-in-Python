@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive &amp; Statistical Modeling in Python — 60 Projects</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --heading: #58a6ff;
+            --accent: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --purple: #bc8cff;
+            --link: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--heading);
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 0.3rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--accent);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            text-align: center;
+        }
+        .stat-box .number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--heading);
+        }
+        .stat-box .label {
+            font-size: 0.8rem;
+            color: var(--text);
+            opacity: 0.7;
+        }
+        .phase {
+            margin: 2rem 0;
+        }
+        .phase-header {
+            background: linear-gradient(135deg, #1f6feb22, #bc8cff11);
+            border: 1px solid var(--border);
+            border-radius: 8px 8px 0 0;
+            padding: 1rem 1.5rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .phase-1 .phase-header { color: var(--green); border-left: 4px solid var(--green); }
+        .phase-2 .phase-header { color: #58a6ff; border-left: 4px solid #58a6ff; }
+        .phase-3 .phase-header { color: var(--accent); border-left: 4px solid var(--accent); }
+        .phase-4 .phase-header { color: var(--red); border-left: 4px solid var(--red); }
+        .phase-5 .phase-header { color: var(--purple); border-left: 4px solid var(--purple); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+        }
+        th {
+            background: #21262d;
+            color: var(--text);
+            padding: 0.6rem 1rem;
+            text-align: left;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #1f6feb11; }
+        td:first-child {
+            font-weight: bold;
+            color: var(--accent);
+            width: 3rem;
+            text-align: center;
+        }
+        td a {
+            color: var(--link);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        td a:hover {
+            text-decoration: underline;
+            color: #79c0ff;
+        }
+        .concept {
+            font-size: 0.8rem;
+            color: #8b949e;
+            line-height: 1.5;
+        }
+        .dep {
+            font-size: 0.78rem;
+            color: #6e7681;
+            white-space: nowrap;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: #6e7681;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 Predictive &amp; Statistical Modeling in Python</h1>
+<p class="subtitle">60 Projects — Very Easy → Mastery — Full Progressive Curriculum</p>
+
+<div class="stats">
+    <div class="stat-box"><div class="number">60</div><div class="label">Projects</div></div>
+    <div class="stat-box"><div class="number">5</div><div class="label">Phases</div></div>
+    <div class="stat-box"><div class="number">60</div><div class="label">Working Code Examples</div></div>
+    <div class="stat-box"><div class="number">∞</div><div class="label">Dependency Chain</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PHASE 1 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="phase phase-1">
+    <div class="phase-header">📋 PHASE 1: VERY EASY — Foundation Thinking (Projects 1–8)</div>
+    <table>
+        <tr><th>#</th><th>Project</th><th>Core Concepts</th><th>Depends On</th></tr>
+        <tr>
+            <td>1</td>
+            <td><a href="project_01.html">Will It Rain Tomorrow? Predicting Binary Weather Outcomes</a></td>
+            <td class="concept">What is a model → Input/Output thinking → numpy arrays → train/test split</td>
+            <td class="dep">None (Start)</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td><a href="project_02.html">Predicting a Student's Score From Study Hours</a></td>
+            <td class="concept">Simple Linear Regression → OLS → slope/intercept → sklearn LinearRegression</td>
+            <td class="dep">Project 1</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td><a href="project_03.html">House Price From Square Footage — One Feature, One Output</a></td>
+            <td class="concept">Cost function (MSE) → model fitting → prediction vs actuals → matplotlib</td>
+            <td class="dep">Project 2</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td><a href="project_04.html">Classifying Spam vs Not-Spam Using One Threshold</a></td>
+            <td class="concept">Binary classification → decision threshold → confusion matrix → accuracy</td>
+            <td class="dep">Project 1</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td><a href="project_05.html">Estimating Ice Cream Sales From Temperature</a></td>
+            <td class="concept">Correlation → Pearson r → R² score → residuals → underfitting</td>
+            <td class="dep">Projects 2, 3</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td><a href="project_06.html">Will a Customer Buy? Logistic Regression From Scratch</a></td>
+            <td class="concept">Sigmoid → log-odds → binary cross-entropy → sklearn LogisticRegression</td>
+            <td class="dep">Projects 1, 4</td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td><a href="project_07.html">Predicting Employee Salary Band — Discrete Buckets</a></td>
+            <td class="concept">Ordinal target → binning → label encoding → classification vs regression</td>
+            <td class="dep">Projects 2, 6</td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td><a href="project_08.html">Diagnosing a Model — Is It Learning or Memorizing?</a></td>
+            <td class="concept">Overfitting vs underfitting → bias-variance tradeoff → learning curves</td>
+            <td class="dep">Projects 2–7</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PHASE 2 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="phase phase-2">
+    <div class="phase-header">📋 PHASE 2: EASY — Core Patterns (Projects 9–15)</div>
+    <table>
+        <tr><th>#</th><th>Project</th><th>Core Concepts</th><th>Depends On</th></tr>
+        <tr>
+            <td>9</td>
+            <td><a href="project_09.html">Predicting House Price From Many Features — Multiple Regression</a></td>
+            <td class="concept">Multiple Linear Regression → multicollinearity → VIF → feature matrix</td>
+            <td class="dep">Projects 3, 5</td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td><a href="project_10.html">Diagnosing Medical Risk — Logistic Regression With Multiple Predictors</a></td>
+            <td class="concept">Multivariate logistic regression → precision/recall → ROC-AUC</td>
+            <td class="dep">Projects 6, 8</td>
+        </tr>
+        <tr>
+            <td>11</td>
+            <td><a href="project_11.html">Classifying Iris Flowers — K-Nearest Neighbors</a></td>
+            <td class="concept">KNN → distance metrics → choosing K → decision boundary</td>
+            <td class="dep">Projects 4, 8</td>
+        </tr>
+        <tr>
+            <td>12</td>
+            <td><a href="project_12.html">Predicting Loan Default With a Decision Tree</a></td>
+            <td class="concept">Decision Tree → Gini impurity → entropy → max_depth → visualization</td>
+            <td class="dep">Projects 7, 10</td>
+        </tr>
+        <tr>
+            <td>13</td>
+            <td><a href="project_13.html">Scaling and Normalizing Features — Why Raw Numbers Lie</a></td>
+            <td class="concept">StandardScaler → MinMaxScaler → RobustScaler → pipeline concept</td>
+            <td class="dep">Projects 9, 11</td>
+        </tr>
+        <tr>
+            <td>14</td>
+            <td><a href="project_14.html">Finding Natural Groups in Customer Spending — K-Means Clustering</a></td>
+            <td class="concept">Unsupervised learning → K-Means → inertia → elbow method</td>
+            <td class="dep">Projects 8, 13</td>
+        </tr>
+        <tr>
+            <td>15</td>
+            <td><a href="project_15.html">Cross-Validating a Model — Getting a Trustworthy Score</a></td>
+            <td class="concept">K-Fold CV → StratifiedKFold → cross_val_score</td>
+            <td class="dep">Projects 8, 10, 12</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PHASE 3 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="phase phase-3">
+    <div class="phase-header">📋 PHASE 3: MEDIUM — Professional Techniques (Projects 16–30)</div>
+    <table>
+        <tr><th>#</th><th>Project</th><th>Core Concepts</th><th>Depends On</th></tr>
+        <tr>
+            <td>16</td>
+            <td><a href="project_16.html">Surviving the Titanic — End-to-End Feature Engineering Pipeline</a></td>
+            <td class="concept">Imputation → one-hot encoding → sklearn Pipeline → ColumnTransformer</td>
+            <td class="dep">Projects 13, 15</td>
+        </tr>
+        <tr>
+            <td>17</td>
+            <td><a href="project_17.html">Predicting Energy Demand With Ridge Regression</a></td>
+            <td class="concept">Regularization → Ridge (L2) → alpha tuning → coefficient shrinkage</td>
+            <td class="dep">Projects 9, 15</td>
+        </tr>
+        <tr>
+            <td>18</td>
+            <td><a href="project_18.html">Sparse Feature Selection in Housing Data With Lasso</a></td>
+            <td class="concept">Lasso (L1) → automatic feature selection → sparsity → ElasticNet</td>
+            <td class="dep">Project 17</td>
+        </tr>
+        <tr>
+            <td>19</td>
+            <td><a href="project_19.html">Detecting Fraudulent Transactions — Handling Class Imbalance</a></td>
+            <td class="concept">Class imbalance → SMOTE → class_weight → precision-recall tradeoff</td>
+            <td class="dep">Projects 10, 15, 16</td>
+        </tr>
+        <tr>
+            <td>20</td>
+            <td><a href="project_20.html">Predicting Next Month's Revenue — Polynomial Features</a></td>
+            <td class="concept">Polynomial regression → PolynomialFeatures → degree selection</td>
+            <td class="dep">Projects 8, 17</td>
+        </tr>
+        <tr>
+            <td>21</td>
+            <td><a href="project_21.html">Random Forest for Credit Scoring — Ensemble Thinking</a></td>
+            <td class="concept">Bagging → Random Forest → feature importance → OOB error</td>
+            <td class="dep">Projects 12, 15</td>
+        </tr>
+        <tr>
+            <td>22</td>
+            <td><a href="project_22.html">Tuning Hyperparameters — GridSearchCV vs RandomizedSearchCV</a></td>
+            <td class="concept">Hyperparameter space → GridSearchCV → RandomizedSearchCV → nested CV</td>
+            <td class="dep">Projects 15, 21</td>
+        </tr>
+        <tr>
+            <td>23</td>
+            <td><a href="project_23.html">Predicting Customer Churn — Gradient Boosting Step by Step</a></td>
+            <td class="concept">Boosting → GradientBoosting → residual fitting → learning_rate tradeoff</td>
+            <td class="dep">Projects 21, 22</td>
+        </tr>
+        <tr>
+            <td>24</td>
+            <td><a href="project_24.html">Reducing Dimensions in High-Dimensional Gene Data — PCA</a></td>
+            <td class="concept">PCA → explained variance → eigenvectors → scree plot</td>
+            <td class="dep">Projects 13, 14</td>
+        </tr>
+        <tr>
+            <td>25</td>
+            <td><a href="project_25.html">Predicting Sales With Time — Simple Time Series Decomposition</a></td>
+            <td class="concept">Time series → trend/seasonality/residual → autocorrelation (ACF)</td>
+            <td class="dep">Projects 5, 20</td>
+        </tr>
+        <tr>
+            <td>26</td>
+            <td><a href="project_26.html">Forecasting Monthly Sales With ARIMA</a></td>
+            <td class="concept">Stationarity → ADF test → differencing → AR/I/MA → auto_arima</td>
+            <td class="dep">Project 25</td>
+        </tr>
+        <tr>
+            <td>27</td>
+            <td><a href="project_27.html">Interpreting a Black Box — SHAP Values on a Churn Model</a></td>
+            <td class="concept">SHAP → Shapley values → waterfall/beeswarm → global vs local</td>
+            <td class="dep">Projects 23, 21</td>
+        </tr>
+        <tr>
+            <td>28</td>
+            <td><a href="project_28.html">Predicting Product Category From Text — Naive Bayes NLP</a></td>
+            <td class="concept">CountVectorizer → TF-IDF → Naive Bayes → text pipeline</td>
+            <td class="dep">Projects 16, 19</td>
+        </tr>
+        <tr>
+            <td>29</td>
+            <td><a href="project_29.html">Survival Analysis — When Will a Machine Fail?</a></td>
+            <td class="concept">Kaplan-Meier → censored data → log-rank test → lifelines</td>
+            <td class="dep">Projects 10, 25</td>
+        </tr>
+        <tr>
+            <td>30</td>
+            <td><a href="project_30.html">Bayesian Thinking — A/B Test With Prior Beliefs</a></td>
+            <td class="concept">Bayesian inference → prior/posterior → Beta-Binomial → credible interval</td>
+            <td class="dep">Projects 6, 15</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PHASE 4 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="phase phase-4">
+    <div class="phase-header">📋 PHASE 4: HARD — Advanced Patterns (Projects 31–45)</div>
+    <table>
+        <tr><th>#</th><th>Project</th><th>Core Concepts</th><th>Depends On</th></tr>
+        <tr>
+            <td>31</td>
+            <td><a href="project_31.html">XGBoost vs LightGBM — Head-to-Head on a Real Dataset</a></td>
+            <td class="concept">XGBoost internals → LightGBM leaf-wise → GOSS/EFB → early stopping</td>
+            <td class="dep">Projects 23, 22</td>
+        </tr>
+        <tr>
+            <td>32</td>
+            <td><a href="project_32.html">Stacking Models to Beat Any Single Learner</a></td>
+            <td class="concept">Stacking → meta-learner → StackingClassifier → blending → OOF predictions</td>
+            <td class="dep">Projects 21, 23, 31</td>
+        </tr>
+        <tr>
+            <td>33</td>
+            <td><a href="project_33.html">Calibrating Probability Outputs — Trust Your Model's Confidence</a></td>
+            <td class="concept">Platt scaling → isotonic regression → reliability diagram → CalibratedClassifierCV</td>
+            <td class="dep">Projects 10, 32</td>
+        </tr>
+        <tr>
+            <td>34</td>
+            <td><a href="project_34.html">Anomaly Detection in Server Logs — Isolation Forest</a></td>
+            <td class="concept">Isolation Forest → contamination → One-Class SVM → decision_function</td>
+            <td class="dep">Projects 14, 24</td>
+        </tr>
+        <tr>
+            <td>35</td>
+            <td><a href="project_35.html">Multi-Label Classification — Tagging Articles With Many Labels</a></td>
+            <td class="concept">MultiOutputClassifier → label powerset → hamming loss → subset accuracy</td>
+            <td class="dep">Projects 12, 28</td>
+        </tr>
+        <tr>
+            <td>36</td>
+            <td><a href="project_36.html">Hierarchical Time Series — Forecasting at Store and Region Level</a></td>
+            <td class="concept">Top-down/bottom-up reconciliation → coherent forecasts → grouped series</td>
+            <td class="dep">Projects 25, 26</td>
+        </tr>
+        <tr>
+            <td>37</td>
+            <td><a href="project_37.html">Causal Inference — Does a Discount Actually Drive Sales?</a></td>
+            <td class="concept">Propensity score matching → treatment effect → DoWhy framework</td>
+            <td class="dep">Projects 30, 19</td>
+        </tr>
+        <tr>
+            <td>38</td>
+            <td><a href="project_38.html">Bayesian Regression — Uncertainty Quantification on House Prices</a></td>
+            <td class="concept">Bayesian linear model → MCMC → posterior predictive → credible intervals</td>
+            <td class="dep">Projects 30, 17</td>
+        </tr>
+        <tr>
+            <td>39</td>
+            <td><a href="project_39.html">Generalized Linear Models — Count Data and Poisson Regression</a></td>
+            <td class="concept">GLM family → Poisson regression → link function → negative binomial</td>
+            <td class="dep">Projects 9, 17</td>
+        </tr>
+        <tr>
+            <td>40</td>
+            <td><a href="project_40.html">Mixed Effects Models — Predicting Student Scores Across Schools</a></td>
+            <td class="concept">Fixed vs random effects → intraclass correlation → statsmodels MixedLM</td>
+            <td class="dep">Projects 9, 39</td>
+        </tr>
+        <tr>
+            <td>41</td>
+            <td><a href="project_41.html">Feature Selection at Scale — Boruta, RFE, and Permutation Importance</a></td>
+            <td class="concept">Boruta → RFE → permutation importance → shadow features</td>
+            <td class="dep">Projects 18, 27, 31</td>
+        </tr>
+        <tr>
+            <td>42</td>
+            <td><a href="project_42.html">Automated Machine Learning — AutoML With FLAML and Optuna</a></td>
+            <td class="concept">AutoML → FLAML → Optuna TPE sampler → cost-aware optimization</td>
+            <td class="dep">Projects 22, 31, 32</td>
+        </tr>
+        <tr>
+            <td>43</td>
+            <td><a href="project_43.html">Predicting Lifetime Value — Regression on Skewed, Heavy-Tailed Targets</a></td>
+            <td class="concept">Target transformation → log1p → Box-Cox → Tweedie → quantile regression</td>
+            <td class="dep">Projects 9, 39, 19</td>
+        </tr>
+        <tr>
+            <td>44</td>
+            <td><a href="project_44.html">Forecasting With Prophet — Trend Changepoints and Holiday Effects</a></td>
+            <td class="concept">Prophet → changepoint detection → fourier seasonality → holiday regressors</td>
+            <td class="dep">Projects 25, 26, 36</td>
+        </tr>
+        <tr>
+            <td>45</td>
+            <td><a href="project_45.html">Recommendation Engine — Collaborative Filtering With Matrix Factorization</a></td>
+            <td class="concept">Collaborative filtering → SVD → ALS → implicit feedback → surprise</td>
+            <td class="dep">Projects 24, 14</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PHASE 5 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="phase phase-5">
+    <div class="phase-header">📋 PHASE 5: VERY HARD — Mastery + Bridge to Next Subject (Projects 46–60)</div>
+    <table>
+        <tr><th>#</th><th>Project</th><th>Core Concepts</th><th>Depends On</th></tr>
+        <tr>
+            <td>46</td>
+            <td><a href="project_46.html">Gaussian Process Regression — Uncertainty-Aware Predictions on Small Data</a></td>
+            <td class="concept">Gaussian Processes → kernel functions (RBF, Matérn) → posterior mean/variance</td>
+            <td class="dep">Projects 38, 17</td>
+        </tr>
+        <tr>
+            <td>47</td>
+            <td><a href="project_47.html">Neural Network From Scratch — Backpropagation Without a Framework</a></td>
+            <td class="concept">Forward pass → backpropagation → chain rule → weight update → gradient flow</td>
+            <td class="dep">Projects 8, 23</td>
+        </tr>
+        <tr>
+            <td>48</td>
+            <td><a href="project_48.html">Tabular Deep Learning — TabNet on a Real Business Problem</a></td>
+            <td class="concept">TabNet → attention-based feature selection → tabular DL vs GBM debate</td>
+            <td class="dep">Projects 47, 31, 41</td>
+        </tr>
+        <tr>
+            <td>49</td>
+            <td><a href="project_49.html">Multi-Step Time Series Forecasting With LSTM</a></td>
+            <td class="concept">LSTM architecture → sliding window → multi-step horizon → teacher forcing</td>
+            <td class="dep">Projects 47, 26, 44</td>
+        </tr>
+        <tr>
+            <td>50</td>
+            <td><a href="project_50.html">Transfer Learning on Tabular Data — Embeddings From Pre-Trained Models</a></td>
+            <td class="concept">Entity embeddings → pre-training → fine-tuning → categorical embedding layers</td>
+            <td class="dep">Projects 48, 49</td>
+        </tr>
+        <tr>
+            <td>51</td>
+            <td><a href="project_51.html">Conformal Prediction — Guaranteed Coverage Intervals on Any Model</a></td>
+            <td class="concept">Coverage guarantee → nonconformity score → mondrian conformal → MAPIE</td>
+            <td class="dep">Projects 33, 38, 46</td>
+        </tr>
+        <tr>
+            <td>52</td>
+            <td><a href="project_52.html">Online Learning — Models That Update With Every New Transaction</a></td>
+            <td class="concept">SGDClassifier partial_fit → concept drift → River library → sliding window</td>
+            <td class="dep">Projects 26, 44, 42</td>
+        </tr>
+        <tr>
+            <td>53</td>
+            <td><a href="project_53.html">Counterfactual Explanations — Why Was My Loan Rejected?</a></td>
+            <td class="concept">DiCE → algorithmic recourse → actionable features → proximity constraint</td>
+            <td class="dep">Projects 27, 37</td>
+        </tr>
+        <tr>
+            <td>54</td>
+            <td><a href="project_54.html">Structural Equation Modeling — Modeling Latent Causes</a></td>
+            <td class="concept">SEM → latent variables → path diagrams → factor analysis → semopy</td>
+            <td class="dep">Projects 37, 40, 24</td>
+        </tr>
+        <tr>
+            <td>55</td>
+            <td><a href="project_55.html">Production ML Pipeline — Packaging a Model as a REST API</a></td>
+            <td class="concept">joblib serialization → FastAPI → pydantic validation → Docker</td>
+            <td class="dep">Projects 32, 42</td>
+        </tr>
+        <tr>
+            <td>56</td>
+            <td><a href="project_56.html">Model Monitoring in Production — Detecting Data Drift</a></td>
+            <td class="concept">Data drift → covariate shift → PSI → Evidently AI → retraining triggers</td>
+            <td class="dep">Projects 52, 55</td>
+        </tr>
+        <tr>
+            <td>57</td>
+            <td><a href="project_57.html">Federated Learning Simulation — Training Across Private Data Silos</a></td>
+            <td class="concept">FedAvg algorithm → data privacy → simulation with Flower (flwr)</td>
+            <td class="dep">Projects 47, 55</td>
+        </tr>
+        <tr>
+            <td>58</td>
+            <td><a href="project_58.html">Reinforcement Learning for Pricing — Bandit Algorithms</a></td>
+            <td class="concept">Multi-armed bandit → epsilon-greedy → UCB → Thompson sampling → regret</td>
+            <td class="dep">Projects 30, 52</td>
+        </tr>
+        <tr>
+            <td>59</td>
+            <td><a href="project_59.html">End-to-End ML System — Churn Prediction With Feature Store + Monitoring</a></td>
+            <td class="concept">Feature store → training/serving skew → model registry → Feast/MLflow</td>
+            <td class="dep">Projects 55, 56, 42, 23</td>
+        </tr>
+        <tr>
+            <td>60</td>
+            <td><a href="project_60.html">Bridge to Deep Learning — When Statistical Models Hit Their Ceiling</a></td>
+            <td class="concept">Statistical ML limits → representation learning → neural architecture → DL roadmap</td>
+            <td class="dep">All Prior Projects</td>
+        </tr>
+    </table>
+</div>
+
+<div class="footer">
+    <p>60 projects · 5 phases · Progressive dependency chain · Predictive &amp; Statistical Modeling in Python</p>
+</div>
+
+</body>
+</html>

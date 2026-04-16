@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 39 — Generalized Linear Models — Count Data and Poisson Regression</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 39: Generalized Linear Models — Count Data and Poisson Regression</h1>
+<p>
+    <span class="tag">GLM</span>
+    <span class="tag">Poisson Regression</span>
+    <span class="tag">Link Function</span>
+    <span class="tag">Overdispersion</span>
+    <span class="tag">Negative Binomial</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 9, 17</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A hospital wants to predict the number of ER visits per day based on weather, day of week, and flu season</li>
+        <li>The outcome is a COUNT (0, 1, 2, 3, ...) — not continuous, not binary</li>
+        <li>Linear regression (Project 9) can predict negative counts — that's impossible</li>
+        <li>Logistic regression (Project 6) handles binary — but counts aren't binary</li>
+        <li>Goal → use Poisson regression (a GLM) to properly model count data</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 9: linear regression assumes y is continuous and normally distributed</li>
+        <li>From Project 17: Ridge adds regularization but doesn't change the distributional assumption</li>
+        <li>GLMs generalize linear regression by allowing different distributions (Poisson, Binomial, Gamma)</li>
+        <li>The link function connects the linear predictor to the expected value of y</li>
+        <li>For counts: Poisson distribution with log link → ensures predictions are always non-negative</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic ER visit count data with known relationships</li>
+        <li>Show why linear regression fails for count data (negative predictions, wrong distribution)</li>
+        <li>Fit a Poisson GLM using statsmodels</li>
+        <li>Check for overdispersion — when variance > mean, Poisson is too restrictive</li>
+        <li>Fit a Negative Binomial model to handle overdispersion</li>
+        <li>Compare models using deviance, AIC, and residual analysis</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Check if variance ≈ mean — Poisson assumes this (equidispersion)</li>
+        <li>✅ Use the log link function for count data — ensures non-negative predictions</li>
+        <li>✅ Check for overdispersion — if variance >> mean, use Negative Binomial instead</li>
+        <li>✅ Interpret coefficients as multiplicative effects: exp(β) = rate ratio</li>
+        <li>✅ Use deviance residuals to assess model fit — they should be roughly standard normal</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use linear regression for count data — it predicts negative values and assumes normality</li>
+        <li>❌ Do NOT ignore overdispersion — Poisson with overdispersed data gives wrong standard errors</li>
+        <li>❌ Do NOT interpret Poisson coefficients like linear regression — they're on the log scale</li>
+        <li>❌ Do NOT forget about zero-inflation — if there are excess zeros, use zero-inflated models</li>
+        <li>❌ Do NOT use R² for GLMs — use deviance, AIC, or pseudo-R² instead</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Poisson regression</strong> → count data where variance ≈ mean</li>
+        <li>🔹 <strong>Negative Binomial</strong> → count data with overdispersion (variance > mean)</li>
+        <li>🔹 <strong>Zero-inflated Poisson/NB</strong> → when there are more zeros than the model predicts</li>
+        <li>🔹 <strong>Linear regression (Project 9)</strong> → continuous outcomes, approximately normal</li>
+        <li>🔹 <strong>Logistic regression (Project 6)</strong> → binary outcomes (a GLM with binomial family)</li>
+        <li>🔹 <strong>Gamma GLM</strong> → positive continuous outcomes with right skew (e.g., insurance claims)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When the outcome is continuous and approximately normal — use linear regression</li>
+        <li>🚫 When counts are very large (>100) — normal approximation works fine, use linear regression</li>
+        <li>🚫 When the relationship is highly nonlinear — GLMs are still linear in the link space</li>
+        <li>🚫 When you need complex interactions — tree-based models (Project 21) may be better</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The GLM Framework</h3>
+    <ul>
+        <li>Three components: (1) Random component (distribution), (2) Systematic component (linear predictor), (3) Link function</li>
+        <li>Linear regression: Normal distribution + identity link → E[y] = Xβ</li>
+        <li>Logistic regression: Binomial distribution + logit link → log(p/(1-p)) = Xβ</li>
+        <li>Poisson regression: Poisson distribution + log link → log(E[y]) = Xβ → E[y] = exp(Xβ)</li>
+    </ul>
+
+    <h3>Poisson Distribution</h3>
+    <ul>
+        <li>P(Y=k) = λ^k × e^(-λ) / k! for k = 0, 1, 2, ...</li>
+        <li>Mean = λ, Variance = λ (equidispersion property)</li>
+        <li>The log link ensures λ = exp(Xβ) > 0 always</li>
+    </ul>
+
+    <h3>Coefficient Interpretation</h3>
+    <ul>
+        <li>log(E[y]) = β₀ + β₁x₁ → E[y] = exp(β₀) × exp(β₁x₁)</li>
+        <li>A 1-unit increase in x₁ multiplies the expected count by exp(β₁)</li>
+        <li>exp(β₁) is the Incidence Rate Ratio (IRR)</li>
+        <li>Example: β₁ = 0.3 → exp(0.3) = 1.35 → 35% increase in expected count per unit increase</li>
+    </ul>
+
+    <h3>Overdispersion</h3>
+    <ul>
+        <li>Poisson assumes Var(Y) = E[Y] — but real data often has Var(Y) > E[Y]</li>
+        <li>Overdispersion: extra variability not captured by the Poisson model</li>
+        <li>Causes: unobserved heterogeneity, clustering, missing covariates</li>
+        <li>Solution: Negative Binomial adds a dispersion parameter → Var(Y) = μ + μ²/α</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Ignoring overdispersion</strong> — Poisson with overdispersed data gives too-narrow confidence intervals</li>
+        <li>⚠️ <strong>Interpreting coefficients linearly</strong> — β=0.5 doesn't mean "0.5 more counts"; it means exp(0.5)=1.65× more</li>
+        <li>⚠️ <strong>Negative predictions from OLS</strong> — linear regression on counts can predict -3 visits; Poisson can't</li>
+        <li>⚠️ <strong>Zero-inflation</strong> — if 60% of days have zero ER visits, standard Poisson underestimates zeros</li>
+        <li>⚠️ <strong>Exposure/offset</strong> — comparing counts across different time periods without an offset is wrong</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>GLM fitting uses IRLS (Iteratively Reweighted Least Squares) — O(n × p²) per iteration</li>
+        <li>Converges in 5–25 iterations typically — very fast for moderate data</li>
+        <li>statsmodels handles millions of rows efficiently</li>
+        <li>For very high-dimensional data, use regularized GLMs (glmnet equivalent in Python)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Rate ratios (exp(β)) are intuitive: "flu season increases ER visits by 40%"</li>
+        <li>✅ GLMs are parametric — each coefficient has a clear meaning</li>
+        <li>✅ Confidence intervals on rate ratios quantify uncertainty</li>
+        <li>⚠️ The log link makes raw coefficients less intuitive — always exponentiate for interpretation</li>
+        <li>⚠️ Interaction terms in GLMs are multiplicative on the response scale — harder to explain</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate ER visit count data ───
+n = 1000
+temperature = np.random.normal(60, 15, n)
+is_weekend = np.random.binomial(1, 2/7, n)
+flu_season = np.random.binomial(1, 0.25, n)
+humidity = np.random.uniform(30, 90, n)
+
+# True Poisson model: log(λ) = β₀ + β₁*temp + β₂*weekend + β₃*flu + β₄*humidity
+log_lambda = (2.5 - 0.01 * temperature + 0.3 * is_weekend
+              + 0.5 * flu_season + 0.005 * humidity)
+lambda_true = np.exp(log_lambda)
+er_visits = np.random.poisson(lambda_true)
+
+df = pd.DataFrame({
+    'temperature': temperature, 'is_weekend': is_weekend,
+    'flu_season': flu_season, 'humidity': humidity, 'er_visits': er_visits
+})
+
+print("=== ER Visit Data ===")
+print(f"  Days: {n}")
+print(f"  Mean visits: {er_visits.mean():.1f}, Variance: {er_visits.var():.1f}")
+print(f"  Ratio Var/Mean: {er_visits.var()/er_visits.mean():.2f} (1.0 = equidispersion)")
+print(f"  Range: {er_visits.min()} – {er_visits.max()}")
+print(f"  Zero days: {(er_visits == 0).sum()} ({(er_visits == 0).mean():.1%})")
+
+# ─── Step 2: Why linear regression fails ───
+X = df[['temperature', 'is_weekend', 'flu_season', 'humidity']]
+y = df['er_visits']
+
+lr = LinearRegression()
+lr.fit(X, y)
+lr_pred = lr.predict(X)
+
+print(f"\n=== Linear Regression (Wrong Model) ===")
+print(f"  Negative predictions: {(lr_pred < 0).sum()} ({(lr_pred < 0).mean():.1%})")
+print(f"  Min prediction: {lr_pred.min():.1f} (impossible for counts!)")
+print(f"  R²: {lr.score(X, y):.4f}")
+
+# ─── Step 3: Poisson GLM ───
+X_sm = sm.add_constant(X)
+poisson_model = sm.GLM(y, X_sm, family=sm.families.Poisson())
+poisson_result = poisson_model.fit()
+
+print(f"\n=== Poisson GLM ===")
+print(poisson_result.summary2().tables[1].to_string())
+
+print(f"\n  Rate Ratios (exp(β)):")
+for name, coef in zip(['const'] + list(X.columns), poisson_result.params):
+    print(f"    {name:<15}: β={coef:.4f}, IRR={np.exp(coef):.4f}")
+
+print(f"\n  Deviance: {poisson_result.deviance:.1f}")
+print(f"  Pearson chi2: {poisson_result.pearson_chi2:.1f}")
+print(f"  AIC: {poisson_result.aic:.1f}")
+
+# ─── Step 4: Check for overdispersion ───
+pearson_chi2 = poisson_result.pearson_chi2
+dof = poisson_result.df_resid
+dispersion = pearson_chi2 / dof
+
+print(f"\n=== Overdispersion Check ===")
+print(f"  Pearson chi2 / df = {dispersion:.3f}")
+if dispersion > 1.5:
+    print(f"  ⚠️ Overdispersion detected (ratio >> 1) — consider Negative Binomial")
+else:
+    print(f"  ✅ No significant overdispersion (ratio ≈ 1)")
+
+# ─── Step 5: Negative Binomial for comparison ───
+nb_model = sm.GLM(y, X_sm, family=sm.families.NegativeBinomial(alpha=1.0))
+nb_result = nb_model.fit()
+
+print(f"\n=== Negative Binomial GLM ===")
+print(f"  AIC (Poisson):  {poisson_result.aic:.1f}")
+print(f"  AIC (NegBin):   {nb_result.aic:.1f}")
+print(f"  Better model:   {'Negative Binomial' if nb_result.aic < poisson_result.aic else 'Poisson'}")
+
+# ─── Step 6: Predictions and comparison ───
+poisson_pred = poisson_result.predict(X_sm)
+nb_pred = nb_result.predict(X_sm)
+
+print(f"\n=== Prediction Comparison ===")
+print(f"  {'Model':<15} {'Min':>8} {'Max':>8} {'Mean':>8} {'RMSE':>8}")
+for name, pred in [('Linear', lr_pred), ('Poisson', poisson_pred), ('NegBin', nb_pred)]:
+    rmse = np.sqrt(np.mean((y - pred)**2))
+    print(f"  {name:<15} {pred.min():>8.1f} {pred.max():>8.1f} {pred.mean():>8.1f} {rmse:>8.2f}")
+
+# ─── Step 7: Interpretation example ───
+print(f"\n=== Interpretation ===")
+flu_coef = poisson_result.params['flu_season']
+flu_irr = np.exp(flu_coef)
+print(f"  Flu season coefficient: {flu_coef:.4f}")
+print(f"  Flu season IRR: {flu_irr:.4f}")
+print(f"  → During flu season, ER visits increase by {(flu_irr-1)*100:.1f}%")
+
+weekend_coef = poisson_result.params['is_weekend']
+weekend_irr = np.exp(weekend_coef)
+print(f"  Weekend IRR: {weekend_irr:.4f}")
+print(f"  → Weekends see {(weekend_irr-1)*100:.1f}% more ER visits")
+
+# ─── Step 8: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Actual vs predicted
+axes[0, 0].scatter(y, poisson_pred, alpha=0.3, color='#58a6ff', s=10, label='Poisson')
+axes[0, 0].scatter(y, lr_pred, alpha=0.3, color='#f85149', s=10, label='Linear')
+max_val = max(y.max(), poisson_pred.max())
+axes[0, 0].plot([0, max_val], [0, max_val], '--', color='white', alpha=0.5)
+axes[0, 0].set_xlabel('Actual ER Visits')
+axes[0, 0].set_ylabel('Predicted')
+axes[0, 0].set_title('Actual vs Predicted')
+axes[0, 0].legend()
+axes[0, 0].grid(True, alpha=0.2)
+
+# Distribution of residuals
+poisson_resid = poisson_result.resid_deviance
+axes[0, 1].hist(poisson_resid, bins=40, color='#3fb950', alpha=0.7, density=True, label='Deviance residuals')
+x_norm = np.linspace(-4, 4, 100)
+axes[0, 1].plot(x_norm, np.exp(-x_norm**2/2)/np.sqrt(2*np.pi), '--', color='white', label='Standard Normal')
+axes[0, 1].set_xlabel('Deviance Residual')
+axes[0, 1].set_ylabel('Density')
+axes[0, 1].set_title('Deviance Residuals (should be ~Normal)')
+axes[0, 1].legend()
+axes[0, 1].grid(True, alpha=0.2)
+
+# Effect of flu season
+axes[1, 0].boxplot([df[df.flu_season==0].er_visits, df[df.flu_season==1].er_visits],
+                    labels=['No Flu Season', 'Flu Season'])
+axes[1, 0].set_ylabel('ER Visits')
+axes[1, 0].set_title(f'Flu Season Effect (IRR={flu_irr:.2f})')
+axes[1, 0].grid(True, alpha=0.2)
+
+# Rate ratios with confidence intervals
+params = poisson_result.params[1:]
+conf = poisson_result.conf_int().iloc[1:]
+irr = np.exp(params)
+irr_lower = np.exp(conf[0])
+irr_upper = np.exp(conf[1])
+
+y_pos = range(len(params))
+axes[1, 1].errorbar(irr, y_pos,
+                     xerr=[irr - irr_lower, irr_upper - irr],
+                     fmt='o', color='#58a6ff', capsize=5, markersize=8)
+axes[1, 1].axvline(1.0, color='#f85149', linestyle='--', label='No effect (IRR=1)')
+axes[1, 1].set_yticks(list(y_pos))
+axes[1, 1].set_yticklabels(params.index)
+axes[1, 1].set_xlabel('Incidence Rate Ratio')
+axes[1, 1].set_title('Rate Ratios with 95% CI')
+axes[1, 1].legend()
+axes[1, 1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_39_glm_poisson.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ GLM analysis saved as project_39_glm_poisson.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>GLMs extend linear regression to non-normal outcomes through link functions and distribution families</li>
+        <li>Poisson regression is the go-to for count data — log link ensures non-negative predictions</li>
+        <li>Always check for overdispersion — if Var > Mean, use Negative Binomial instead</li>
+        <li>Coefficients are on the log scale — exponentiate to get interpretable rate ratios</li>
+        <li>Linear regression, logistic regression, and Poisson regression are all GLMs — same framework, different families</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 40</h3>
+    <ul>
+        <li>GLMs assume all observations are independent — but what if students are nested within schools?</li>
+        <li>Project 40 introduces <strong>Mixed Effects Models</strong> — handling grouped/hierarchical data</li>
+        <li>Fixed effects capture population-level trends; random effects capture group-level variation</li>
+        <li>This extends the regression foundation from Project 9 and the GLM framework from this project</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_38.html">← Project 38: Bayesian Regression</a>
+    <a href="project_40.html">Project 40: Mixed Effects Models →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 38 — Bayesian Regression — Uncertainty Quantification on House Prices</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 38: Bayesian Regression — Uncertainty Quantification on House Prices</h1>
+<p>
+    <span class="tag">Bayesian Linear Model</span>
+    <span class="tag">MCMC</span>
+    <span class="tag">Posterior Predictive</span>
+    <span class="tag">Credible Intervals</span>
+    <span class="tag">PyMC</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 30, 17</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A real estate company wants to price houses — but they need more than a single number</li>
+        <li>For a house predicted at $350K, the bank asks: "How confident are you? Could it be $300K? $400K?"</li>
+        <li>Ridge regression (Project 17) gives a point estimate — no uncertainty information</li>
+        <li>Bayesian regression gives a full probability distribution over the predicted price</li>
+        <li>Goal → build a Bayesian linear regression that quantifies uncertainty on every prediction</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 17: Ridge regression adds L2 regularization — Bayesian regression shows this IS a Gaussian prior on weights</li>
+        <li>From Project 30: Bayesian inference combines prior + likelihood → posterior</li>
+        <li>Place priors on regression coefficients and noise variance</li>
+        <li>Use MCMC (via PyMC) to sample from the posterior distribution of parameters</li>
+        <li>Generate posterior predictive distributions — each prediction is a distribution, not a point</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate house price data with known relationships</li>
+        <li>Fit a frequentist Ridge regression for comparison (Project 17)</li>
+        <li>Build a Bayesian linear model with PyMC — priors on coefficients and sigma</li>
+        <li>Run MCMC sampling and check convergence (trace plots, R-hat)</li>
+        <li>Generate posterior predictive samples for new houses</li>
+        <li>Compare point estimates and show the value of uncertainty quantification</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use weakly informative priors — let the data dominate but prevent extreme values</li>
+        <li>✅ Check MCMC convergence — R-hat < 1.01, effective sample size > 400, no divergences</li>
+        <li>✅ Report credible intervals on predictions — "95% probability the price is between $310K and $390K"</li>
+        <li>✅ Compare posterior means to frequentist estimates — they should be similar with enough data</li>
+        <li>✅ Use posterior predictive checks — simulate data from the model and compare to observed data</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use flat/improper priors — they can cause sampling issues and aren't truly "uninformative"</li>
+        <li>❌ Do NOT ignore convergence diagnostics — unconverged chains produce meaningless results</li>
+        <li>❌ Do NOT confuse parameter uncertainty with prediction uncertainty — predictions include noise</li>
+        <li>❌ Do NOT use Bayesian regression just for point estimates — the whole point is the uncertainty</li>
+        <li>❌ Do NOT skip posterior predictive checks — they reveal model misspecification</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Bayesian regression</strong> → when uncertainty quantification is critical (finance, healthcare, risk)</li>
+        <li>🔹 <strong>Ridge regression (Project 17)</strong> → when you just need a point estimate quickly</li>
+        <li>🔹 <strong>PyMC / MCMC</strong> → for complex Bayesian models where conjugate solutions don't exist</li>
+        <li>🔹 <strong>Conjugate Bayesian (Project 30)</strong> → for simple models with closed-form posteriors</li>
+        <li>🔹 <strong>Frequentist confidence intervals</strong> → when Bayesian computation is too expensive</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you only need a point prediction and uncertainty doesn't matter</li>
+        <li>🚫 When the dataset is huge (millions of rows) — MCMC is slow; use variational inference instead</li>
+        <li>🚫 When the model is very complex (deep neural nets) — standard MCMC doesn't scale</li>
+        <li>🚫 When stakeholders don't understand or need probability distributions</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Bayesian Linear Regression</h3>
+    <ul>
+        <li>Model: y = Xβ + ε, where ε ~ Normal(0, σ²)</li>
+        <li>Priors: β ~ Normal(0, τ²), σ ~ HalfNormal(s)</li>
+        <li>Posterior: P(β, σ | data) ∝ P(data | β, σ) × P(β) × P(σ)</li>
+        <li>No closed form for general priors → use MCMC to sample from the posterior</li>
+    </ul>
+
+    <h3>Ridge Regression IS Bayesian</h3>
+    <ul>
+        <li>Ridge penalty λ||β||² corresponds to a Gaussian prior on β with variance 1/λ</li>
+        <li>The Ridge solution is the MAP (Maximum A Posteriori) estimate under this prior</li>
+        <li>Bayesian regression goes further — it gives the FULL posterior, not just the mode</li>
+    </ul>
+
+    <h3>MCMC Sampling</h3>
+    <ul>
+        <li>Markov Chain Monte Carlo generates samples from the posterior distribution</li>
+        <li>Each sample is a complete set of parameters (all β's and σ)</li>
+        <li>With 4000 samples, you have 4000 possible regression lines — the spread shows uncertainty</li>
+        <li>PyMC uses NUTS (No-U-Turn Sampler) — an efficient variant of Hamiltonian Monte Carlo</li>
+    </ul>
+
+    <h3>Posterior Predictive Distribution</h3>
+    <ul>
+        <li>For a new house x*: sample β from posterior, compute ŷ = x*β, add noise from σ</li>
+        <li>Repeat 4000 times → get a distribution of predicted prices</li>
+        <li>The spread captures BOTH parameter uncertainty AND inherent noise</li>
+        <li>Wider intervals = more uncertainty (sparse data region or noisy features)</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Divergent transitions</strong> — NUTS warns about these; reparameterize the model or use stronger priors</li>
+        <li>⚠️ <strong>Low effective sample size</strong> — chains are autocorrelated; increase draws or thin the chain</li>
+        <li>⚠️ <strong>Prior sensitivity</strong> — with small data, priors dominate; always do sensitivity analysis</li>
+        <li>⚠️ <strong>Slow sampling</strong> — complex models with many parameters take hours; consider variational inference</li>
+        <li>⚠️ <strong>Overconfident predictions</strong> — if the model is misspecified, uncertainty estimates are wrong</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>MCMC with NUTS: practical for up to ~100K rows and ~50 features</li>
+        <li>Beyond that: use variational inference (ADVI in PyMC) — faster but approximate</li>
+        <li>For very large data: use stochastic variational inference or Bayesian neural networks</li>
+        <li>Sampling time scales roughly as O(n × p × chains × draws)</li>
+        <li>4 chains × 2000 draws is standard — takes seconds for small models, minutes for moderate ones</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Posterior distributions on coefficients show which features matter AND how uncertain we are</li>
+        <li>✅ Credible intervals on predictions are intuitive: "95% chance the price is $310K–$390K"</li>
+        <li>✅ Posterior predictive checks visually show if the model captures the data patterns</li>
+        <li>⚠️ Full posterior distributions can overwhelm stakeholders — summarize with mean + interval</li>
+        <li>⚠️ MCMC diagnostics (trace plots, R-hat) are technical — abstract them away for non-technical audiences</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from scipy import stats
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate house price data ───
+n = 500
+sqft = np.random.uniform(800, 3500, n)
+bedrooms = np.random.choice([2, 3, 4, 5], n, p=[0.2, 0.4, 0.3, 0.1])
+age = np.random.uniform(0, 50, n)
+distance_downtown = np.random.uniform(1, 30, n)
+
+# True relationship
+true_price = (50 + 0.12 * sqft + 15 * bedrooms - 1.5 * age
+              - 3 * distance_downtown)
+noise = np.random.normal(0, 25, n)
+price = true_price + noise
+
+df = pd.DataFrame({
+    'sqft': sqft, 'bedrooms': bedrooms, 'age': age,
+    'distance': distance_downtown, 'price': price
+})
+
+X = df[['sqft', 'bedrooms', 'age', 'distance']].values
+y = df['price'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+print("=== House Price Data ===")
+print(f"  Samples: {n}, Features: 4")
+print(f"  Price range: ${price.min():.0f}K – ${price.max():.0f}K")
+
+# ─── Step 2: Frequentist Ridge for comparison ───
+ridge = Ridge(alpha=1.0)
+ridge.fit(X_train_s, y_train)
+ridge_pred = ridge.predict(X_test_s)
+ridge_rmse = np.sqrt(np.mean((y_test - ridge_pred)**2))
+
+print(f"\n=== Frequentist Ridge Regression ===")
+print(f"  RMSE: ${ridge_rmse:.2f}K")
+print(f"  Coefficients: {ridge.coef_}")
+
+# ─── Step 3: Bayesian Linear Regression (manual conjugate) ───
+# For linear regression with known noise structure, we can use the conjugate form
+# Prior: β ~ N(0, τ²I), σ² known → Posterior: β|data ~ N(μ_post, Σ_post)
+
+# Add intercept
+X_train_b = np.column_stack([np.ones(len(X_train_s)), X_train_s])
+X_test_b = np.column_stack([np.ones(len(X_test_s)), X_test_s])
+
+# Prior parameters
+tau2 = 100  # prior variance on coefficients (weakly informative)
+sigma2_est = np.var(y_train - ridge.predict(X_train_s))  # estimate noise variance
+
+# Posterior for β (conjugate normal-normal)
+prior_precision = np.eye(X_train_b.shape[1]) / tau2
+likelihood_precision = X_train_b.T @ X_train_b / sigma2_est
+posterior_precision = prior_precision + likelihood_precision
+posterior_cov = np.linalg.inv(posterior_precision)
+posterior_mean = posterior_cov @ (X_train_b.T @ y_train / sigma2_est)
+
+print(f"\n=== Bayesian Regression (Conjugate) ===")
+print(f"  Posterior means: {posterior_mean}")
+print(f"  Posterior std:   {np.sqrt(np.diag(posterior_cov))}")
+
+# ─── Step 4: Sample from posterior and make predictions ───
+n_posterior_samples = 4000
+beta_samples = np.random.multivariate_normal(posterior_mean, posterior_cov, n_posterior_samples)
+
+# Posterior predictive for test set
+pred_samples = X_test_b @ beta_samples.T  # (n_test, n_samples)
+# Add noise for full predictive distribution
+pred_samples_noisy = pred_samples + np.random.normal(0, np.sqrt(sigma2_est),
+                                                       pred_samples.shape)
+
+pred_mean = pred_samples.mean(axis=1)
+pred_lower = np.percentile(pred_samples_noisy, 2.5, axis=1)
+pred_upper = np.percentile(pred_samples_noisy, 97.5, axis=1)
+
+bayes_rmse = np.sqrt(np.mean((y_test - pred_mean)**2))
+coverage = np.mean((y_test >= pred_lower) & (y_test <= pred_upper))
+
+print(f"\n=== Bayesian Predictions ===")
+print(f"  RMSE: ${bayes_rmse:.2f}K")
+print(f"  95% credible interval coverage: {coverage:.1%}")
+print(f"  Average interval width: ${(pred_upper - pred_lower).mean():.1f}K")
+
+# ─── Step 5: Show predictions with uncertainty ───
+print(f"\n=== Sample Predictions ===")
+for i in range(5):
+    print(f"  House {i+1}: Actual=${y_test[i]:.0f}K, "
+          f"Predicted=${pred_mean[i]:.0f}K, "
+          f"95% CI=[${pred_lower[i]:.0f}K, ${pred_upper[i]:.0f}K]")
+
+# ─── Step 6: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Posterior distributions of coefficients
+feature_names = ['Intercept', 'Sqft', 'Bedrooms', 'Age', 'Distance']
+ax = axes[0, 0]
+for i, name in enumerate(feature_names):
+    samples = beta_samples[:, i]
+    ax.hist(samples, bins=50, alpha=0.5, density=True, label=name)
+ax.set_xlabel('Coefficient Value')
+ax.set_ylabel('Density')
+ax.set_title('Posterior Distributions of Coefficients')
+ax.legend(fontsize=7)
+ax.grid(True, alpha=0.2)
+
+# Predictions with uncertainty
+sort_idx = np.argsort(y_test)[:50]
+ax = axes[0, 1]
+ax.errorbar(range(len(sort_idx)), pred_mean[sort_idx],
+            yerr=[pred_mean[sort_idx]-pred_lower[sort_idx],
+                  pred_upper[sort_idx]-pred_mean[sort_idx]],
+            fmt='o', color='#58a6ff', markersize=3, capsize=2, alpha=0.7, label='Predicted ± 95% CI')
+ax.scatter(range(len(sort_idx)), y_test[sort_idx], color='#f0883e', s=15, zorder=5, label='Actual')
+ax.set_xlabel('House (sorted by actual price)')
+ax.set_ylabel('Price ($K)')
+ax.set_title('Predictions with 95% Credible Intervals')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Posterior predictive check
+ax = axes[1, 0]
+# Simulate data from posterior
+y_sim = X_train_b @ beta_samples[:100].T + np.random.normal(0, np.sqrt(sigma2_est), (len(X_train_b), 100))
+for j in range(100):
+    ax.hist(y_sim[:, j], bins=30, alpha=0.02, color='#58a6ff', density=True)
+ax.hist(y_train, bins=30, alpha=0.7, color='#f0883e', density=True, label='Observed data')
+ax.set_xlabel('Price ($K)')
+ax.set_ylabel('Density')
+ax.set_title('Posterior Predictive Check')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Uncertainty vs distance from training data
+ax = axes[1, 1]
+interval_width = pred_upper - pred_lower
+ax.scatter(pred_mean, interval_width, alpha=0.5, color='#3fb950', s=15)
+ax.set_xlabel('Predicted Price ($K)')
+ax.set_ylabel('95% CI Width ($K)')
+ax.set_title('Uncertainty vs Predicted Price')
+ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_38_bayesian_regression.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Bayesian regression analysis saved as project_38_bayesian_regression.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Bayesian regression gives a full posterior distribution over parameters — not just point estimates</li>
+        <li>Every prediction comes with a credible interval — quantifying how confident the model is</li>
+        <li>Ridge regression IS Bayesian regression with a Gaussian prior — the MAP estimate equals the Ridge solution</li>
+        <li>MCMC convergence must be verified — R-hat, effective sample size, trace plots</li>
+        <li>Posterior predictive checks validate the model — simulate data and compare to observations</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 39</h3>
+    <ul>
+        <li>We've modeled continuous outcomes (prices) and binary outcomes (classification)</li>
+        <li>Project 39 introduces <strong>Generalized Linear Models (GLMs)</strong> — a unified framework for different outcome types</li>
+        <li>What if the outcome is a count (number of customer complaints)? That's Poisson regression</li>
+        <li>GLMs connect the linear predictor to the outcome through a link function — extending regression to new domains</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_37.html">← Project 37: Causal Inference</a>
+    <a href="project_39.html">Project 39: GLMs and Poisson Regression →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

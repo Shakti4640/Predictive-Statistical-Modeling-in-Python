@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 36 — Hierarchical Time Series — Forecasting at Store and Region Level</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 36: Hierarchical Time Series — Forecasting at Store and Region Level</h1>
+<p>
+    <span class="tag">Hierarchical Forecasting</span>
+    <span class="tag">Top-Down</span>
+    <span class="tag">Bottom-Up</span>
+    <span class="tag">Reconciliation</span>
+    <span class="tag">Coherent Forecasts</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 25, 26</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a demand planner at a retail chain with 3 regions, each containing 3–4 stores (10 stores total)</li>
+        <li>Finance needs national-level forecasts for budgeting; operations needs store-level forecasts for inventory</li>
+        <li>Problem: if you forecast each store independently (Project 26), the store forecasts don't sum to the regional or national forecast</li>
+        <li>Store 1 + Store 2 + Store 3 ≠ Region North forecast — this creates planning chaos</li>
+        <li>Goal → produce coherent forecasts where store-level predictions sum exactly to region and national totals</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 25: time series decomposition handles single series — but we have a hierarchy</li>
+        <li>From Project 26: ARIMA forecasts individual series — but doesn't enforce cross-series consistency</li>
+        <li>Three classical strategies: top-down (forecast national, disaggregate), bottom-up (forecast stores, aggregate), middle-out</li>
+        <li>Modern approach: forecast all levels independently, then reconcile using optimal combination</li>
+        <li>Use the summing matrix S to define the hierarchy and enforce coherence</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic hierarchical sales data (national → region → store)</li>
+        <li>Forecast each level independently using exponential smoothing</li>
+        <li>Implement bottom-up reconciliation (sum store forecasts to get region/national)</li>
+        <li>Implement top-down reconciliation (distribute national forecast to stores by historical proportions)</li>
+        <li>Compare reconciliation methods on forecast accuracy at each level</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always check coherence — store forecasts must sum to region, regions must sum to national</li>
+        <li>✅ Use bottom-up when bottom-level data is reliable and has enough history</li>
+        <li>✅ Use top-down when bottom-level data is noisy or sparse</li>
+        <li>✅ Evaluate accuracy at ALL levels — a method good for national may be bad for stores</li>
+        <li>✅ Visualize the hierarchy to understand the aggregation structure</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT forecast each level independently without reconciliation — incoherent forecasts cause planning conflicts</li>
+        <li>❌ Do NOT assume top-down is always better — it loses bottom-level patterns</li>
+        <li>❌ Do NOT ignore intermittent demand at store level — sparse data needs special treatment</li>
+        <li>❌ Do NOT use the same model for all series — some stores may be seasonal, others not</li>
+        <li>❌ Do NOT evaluate only at the aggregate level — store-level accuracy matters for operations</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Bottom-up</strong> → when bottom-level data is rich and reliable; preserves local patterns</li>
+        <li>🔹 <strong>Top-down</strong> → when bottom-level data is noisy/sparse; national trends are more stable</li>
+        <li>🔹 <strong>Middle-out</strong> → when mid-level (region) data is the most reliable starting point</li>
+        <li>🔹 <strong>Optimal reconciliation</strong> → when you want the best of all levels; uses MinT or WLS</li>
+        <li>🔹 <strong>Independent ARIMA (Project 26)</strong> → only when coherence doesn't matter</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you only have one time series — no hierarchy to reconcile</li>
+        <li>🚫 When the hierarchy is flat (no aggregation structure) — just forecast independently</li>
+        <li>🚫 When real-time forecasting is needed — reconciliation adds latency</li>
+        <li>🚫 When bottom-level series are too short for meaningful forecasts — top-down is the only option</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The Summing Matrix S</h3>
+    <ul>
+        <li>Defines how bottom-level series aggregate to higher levels</li>
+        <li>If stores {1,2,3} belong to Region North: y_North = y_1 + y_2 + y_3</li>
+        <li>S maps bottom-level forecasts to all levels: ŷ_all = S × ŷ_bottom</li>
+        <li>Coherence means: the aggregation constraints hold exactly in the forecasts</li>
+    </ul>
+
+    <h3>Bottom-Up Reconciliation</h3>
+    <ul>
+        <li>Forecast each bottom-level series (stores) independently</li>
+        <li>Aggregate: region forecast = sum of store forecasts; national = sum of regions</li>
+        <li>Coherent by construction — but bottom-level noise propagates upward</li>
+    </ul>
+
+    <h3>Top-Down Reconciliation</h3>
+    <ul>
+        <li>Forecast only the top level (national)</li>
+        <li>Disaggregate using historical proportions: ŷ_store_i = p_i × ŷ_national</li>
+        <li>p_i = historical share of store i in national sales</li>
+        <li>Coherent by construction — but assumes proportions are stable over time</li>
+    </ul>
+
+    <h3>Optimal Reconciliation (MinT)</h3>
+    <ul>
+        <li>Forecast all levels independently (base forecasts)</li>
+        <li>Adjust base forecasts to satisfy coherence constraints while minimizing total forecast error</li>
+        <li>Uses the covariance structure of forecast errors to optimally weight adjustments</li>
+        <li>Produces the best unbiased coherent forecasts under certain conditions</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Incoherent forecasts</strong> — independent forecasts at different levels won't sum correctly; always reconcile</li>
+        <li>⚠️ <strong>Unstable proportions in top-down</strong> — if a new store opens, historical proportions are wrong</li>
+        <li>⚠️ <strong>Noisy bottom-level data</strong> — bottom-up amplifies noise from sparse store-level series</li>
+        <li>⚠️ <strong>Ignoring negative forecasts</strong> — reconciliation can produce negative values; clip to zero</li>
+        <li>⚠️ <strong>Evaluating only at one level</strong> — a method may excel at national but fail at store level</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Bottom-up: scales linearly with number of bottom-level series — forecast each independently</li>
+        <li>Top-down: O(1) forecasting (one model) + O(n) disaggregation — very fast</li>
+        <li>Optimal reconciliation: requires estimating covariance matrix — O(n²) where n = total series</li>
+        <li>For thousands of stores, use diagonal or shrinkage covariance estimators</li>
+        <li>Libraries like scikit-hts and hierarchicalforecast handle large hierarchies efficiently</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Bottom-up is most interpretable — each store has its own model you can inspect</li>
+        <li>✅ Top-down proportions are easy to explain — "Store X gets 15% of the national forecast"</li>
+        <li>⚠️ Optimal reconciliation adjustments are harder to explain — "why did my store forecast change?"</li>
+        <li>⚠️ Stakeholders at different levels care about different metrics — tailor reporting accordingly</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate hierarchical sales data ───
+# Hierarchy: National → 3 Regions → 10 Stores
+n_months = 36
+dates = pd.date_range('2021-01-01', periods=n_months, freq='MS')
+
+# Store-level base sales with trend and seasonality
+stores = {
+    'North_S1': 100, 'North_S2': 80, 'North_S3': 120,
+    'Central_S4': 150, 'Central_S5': 90, 'Central_S6': 110, 'Central_S7': 70,
+    'South_S8': 130, 'South_S9': 95, 'South_S10': 85
+}
+
+regions = {
+    'North': ['North_S1', 'North_S2', 'North_S3'],
+    'Central': ['Central_S4', 'Central_S5', 'Central_S6', 'Central_S7'],
+    'South': ['South_S8', 'South_S9', 'South_S10']
+}
+
+store_data = {}
+for store, base in stores.items():
+    trend = np.linspace(0, base * 0.3, n_months)
+    season = base * 0.15 * np.sin(2 * np.pi * np.arange(n_months) / 12)
+    noise = np.random.normal(0, base * 0.08, n_months)
+    store_data[store] = np.maximum(base + trend + season + noise, 10)
+
+df = pd.DataFrame(store_data, index=dates)
+
+# Aggregate to region and national
+for region, store_list in regions.items():
+    df[region] = df[store_list].sum(axis=1)
+df['National'] = df[list(regions.keys())].sum(axis=1)
+
+print("=== Hierarchical Sales Data ===")
+print(f"  Months: {n_months}, Stores: {len(stores)}, Regions: {len(regions)}")
+print(f"  National total (last month): {df['National'].iloc[-1]:.0f}")
+for region, store_list in regions.items():
+    print(f"  {region}: {df[region].iloc[-1]:.0f} = " +
+          " + ".join([f"{df[s].iloc[-1]:.0f}" for s in store_list]))
+
+# ─── Step 2: Train/test split ───
+train_end = 30
+train = df.iloc[:train_end]
+test = df.iloc[train_end:]
+h = len(test)
+print(f"\n  Train: {train_end} months, Test: {h} months")
+
+# ─── Step 3: Base forecasts (independent at each level) ───
+def forecast_series(series, h):
+    try:
+        model = ExponentialSmoothing(series, trend='add', seasonal='add',
+                                      seasonal_periods=12).fit(optimized=True)
+        return model.forecast(h).values
+    except Exception:
+        model = ExponentialSmoothing(series, trend='add').fit(optimized=True)
+        return model.forecast(h).values
+
+all_series = list(stores.keys()) + list(regions.keys()) + ['National']
+base_forecasts = {}
+for col in all_series:
+    base_forecasts[col] = forecast_series(train[col], h)
+
+print(f"\n=== Base Forecasts (Independent) ===")
+# Check coherence of base forecasts
+for t in range(h):
+    national_base = base_forecasts['National'][t]
+    region_sum = sum(base_forecasts[r][t] for r in regions.keys())
+    print(f"  Month {t+1}: National forecast={national_base:.0f}, "
+          f"Sum of regions={region_sum:.0f}, Gap={national_base - region_sum:.0f}")
+
+# ─── Step 4: Bottom-Up Reconciliation ───
+print(f"\n=== Bottom-Up Reconciliation ===")
+bu_forecasts = {}
+for store in stores.keys():
+    bu_forecasts[store] = base_forecasts[store]
+
+for region, store_list in regions.items():
+    bu_forecasts[region] = sum(bu_forecasts[s] for s in store_list)
+bu_forecasts['National'] = sum(bu_forecasts[r] for r in regions.keys())
+
+# Verify coherence
+for t in range(h):
+    nat = bu_forecasts['National'][t]
+    reg_sum = sum(bu_forecasts[r][t] for r in regions.keys())
+    assert abs(nat - reg_sum) < 0.01, "Incoherent!"
+print("  ✅ Bottom-up forecasts are coherent (stores sum to regions, regions sum to national)")
+
+# ─── Step 5: Top-Down Reconciliation ───
+print(f"\n=== Top-Down Reconciliation ===")
+# Historical proportions
+total_train = train[list(stores.keys())].sum().sum()
+proportions = {}
+for store in stores.keys():
+    proportions[store] = train[store].sum() / total_train
+
+td_forecasts = {}
+for store in stores.keys():
+    td_forecasts[store] = proportions[store] * base_forecasts['National']
+
+for region, store_list in regions.items():
+    td_forecasts[region] = sum(td_forecasts[s] for s in store_list)
+td_forecasts['National'] = base_forecasts['National']
+
+print("  Historical proportions:")
+for store, prop in proportions.items():
+    print(f"    {store}: {prop:.3f} ({prop:.1%})")
+print("  ✅ Top-down forecasts are coherent")
+
+# ─── Step 6: Evaluate all methods ───
+print(f"\n=== Forecast Accuracy (MAPE) ===")
+def mape(actual, predicted):
+    return np.mean(np.abs((actual - predicted) / actual)) * 100
+
+methods = {'Independent': base_forecasts, 'Bottom-Up': bu_forecasts, 'Top-Down': td_forecasts}
+
+print(f"{'Level':<15} {'Independent':>12} {'Bottom-Up':>12} {'Top-Down':>12}")
+print("-" * 55)
+
+for level in ['National'] + list(regions.keys()):
+    actual = test[level].values
+    scores = []
+    for method_name, forecasts in methods.items():
+        m = mape(actual, forecasts[level])
+        scores.append(f"{m:.1f}%")
+    print(f"{level:<15} {'  '.join(f'{s:>12}' for s in scores)}")
+
+# Store-level average
+for method_name, forecasts in methods.items():
+    store_mapes = [mape(test[s].values, forecasts[s]) for s in stores.keys()]
+    avg = np.mean(store_mapes)
+    print(f"  {method_name} avg store MAPE: {avg:.1f}%")
+
+# ─── Step 7: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# National level comparison
+ax = axes[0, 0]
+ax.plot(dates[:train_end], train['National'], color='#c9d1d9', linewidth=1.5, label='Train')
+ax.plot(dates[train_end:], test['National'], color='white', linewidth=2, label='Actual')
+ax.plot(dates[train_end:], bu_forecasts['National'], '--', color='#3fb950', linewidth=1.5, label='Bottom-Up')
+ax.plot(dates[train_end:], td_forecasts['National'], '--', color='#f0883e', linewidth=1.5, label='Top-Down')
+ax.plot(dates[train_end:], base_forecasts['National'], '--', color='#f85149', linewidth=1.5, label='Independent')
+ax.set_title('National Level Forecasts')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Region level
+ax = axes[0, 1]
+for region, color in zip(regions.keys(), ['#58a6ff', '#3fb950', '#f0883e']):
+    ax.plot(dates[train_end:], test[region], color=color, linewidth=2, label=f'{region} actual')
+    ax.plot(dates[train_end:], bu_forecasts[region], '--', color=color, alpha=0.6, label=f'{region} BU')
+ax.set_title('Region Level — Bottom-Up Forecasts')
+ax.legend(fontsize=7)
+ax.grid(True, alpha=0.2)
+
+# Coherence check
+ax = axes[1, 0]
+incoherence = []
+for t in range(h):
+    gap = base_forecasts['National'][t] - sum(base_forecasts[r][t] for r in regions.keys())
+    incoherence.append(gap)
+ax.bar(range(h), incoherence, color='#f85149', alpha=0.7, label='Independent (incoherent)')
+ax.axhline(0, color='white', linewidth=0.5)
+ax.bar(range(h), [0]*h, color='#3fb950', alpha=0.7, label='Bottom-Up (coherent)')
+ax.set_xlabel('Forecast Month')
+ax.set_ylabel('National - Sum(Regions)')
+ax.set_title('Coherence Gap: Independent vs Reconciled')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Proportions
+ax = axes[1, 1]
+store_names = list(stores.keys())
+props = [proportions[s] for s in store_names]
+colors_stores = plt.cm.Set3(np.linspace(0, 1, len(store_names)))
+ax.pie(props, labels=store_names, colors=colors_stores, autopct='%1.1f%%', startangle=90)
+ax.set_title('Top-Down Proportions (Historical)')
+
+plt.tight_layout()
+plt.savefig('project_36_hierarchical_ts.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Hierarchical forecasting analysis saved as project_36_hierarchical_ts.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Hierarchical time series require coherent forecasts — store forecasts must sum to region and national</li>
+        <li>Bottom-up preserves local patterns but amplifies noise; top-down is stable but loses local detail</li>
+        <li>Optimal reconciliation (MinT) combines the best of both — forecast independently, then reconcile</li>
+        <li>Always evaluate at ALL levels of the hierarchy — a method good for national may fail at store level</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 37</h3>
+    <ul>
+        <li>We've been predicting outcomes — but can we determine what CAUSES them?</li>
+        <li>Project 37 introduces <strong>causal inference</strong> — moving from "X predicts Y" to "X causes Y"</li>
+        <li>We'll use propensity score matching and the DoWhy framework to estimate treatment effects</li>
+        <li>This builds on the Bayesian thinking from Project 30 and the imbalanced data handling from Project 19</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_35.html">← Project 35: Multi-Label Classification</a>
+    <a href="project_37.html">Project 37: Causal Inference →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

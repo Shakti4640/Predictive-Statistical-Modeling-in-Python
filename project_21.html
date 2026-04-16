@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 21 — Random Forest for Credit Scoring — Ensemble Thinking</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 21: Random Forest for Credit Scoring — Ensemble Thinking</h1>
+<p>
+    <span class="tag">Bagging</span>
+    <span class="tag">Random Forest</span>
+    <span class="tag">Feature Importance</span>
+    <span class="tag">Out-of-Bag Error</span>
+    <span class="tag">Variance Reduction</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Projects 12, 15</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work at a bank building a credit scoring model to predict loan defaults</li>
+        <li>Features: income, debt-to-income ratio, credit history length, number of open accounts, recent inquiries, employment years</li>
+        <li>A single decision tree (Project 12) overfits — different random seeds give wildly different trees</li>
+        <li>Pruning helps (max_depth from Project 12), but the model is still unstable</li>
+        <li>Goal → combine many trees into a forest that's more accurate and stable than any single tree</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 12: a single deep tree has high variance — small data changes produce very different trees</li>
+        <li>Bagging (Bootstrap AGGregatING): train many trees on random subsets of data, average their predictions</li>
+        <li>Random Forest adds another twist: at each split, only consider a random subset of features</li>
+        <li>This double randomness (data + features) makes trees diverse — their errors cancel out when averaged</li>
+        <li>Use cross-validation (Project 15) to compare single tree vs forest</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate credit scoring data with nonlinear patterns</li>
+        <li>Train a single decision tree — show its instability across different seeds</li>
+        <li>Train a Random Forest — show it's more stable and accurate</li>
+        <li>Extract feature importances — which features drive credit decisions?</li>
+        <li>Use out-of-bag (OOB) score as a free validation estimate</li>
+        <li>Compare performance: single tree vs forest at different n_estimators</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Start with 100-500 trees — more trees rarely hurt (just slower)</li>
+        <li>✅ Use oob_score=True for a free validation estimate without needing a separate validation set</li>
+        <li>✅ Check feature_importances_ to understand what drives predictions</li>
+        <li>✅ Compare with a single tree to demonstrate the ensemble benefit</li>
+        <li>✅ Random Forest handles nonlinearity and interactions automatically — no polynomial features needed</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use a single tree when you can use a forest — almost always better</li>
+        <li>❌ Do NOT scale features for Random Forest — tree-based models are scale-invariant (unlike Ridge/Lasso from Projects 17-18)</li>
+        <li>❌ Do NOT use too few trees (n_estimators=5) — the variance reduction requires many trees</li>
+        <li>❌ Do NOT interpret feature_importances_ as causal — it measures predictive power, not causation</li>
+        <li>❌ Do NOT assume Random Forest can extrapolate — it can only predict within the range of training data</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Random Forest</strong> → general-purpose, works well out of the box, handles nonlinearity and interactions</li>
+        <li>🔹 <strong>Single Decision Tree</strong> → when interpretability is paramount (Project 12)</li>
+        <li>🔹 <strong>Ridge/Lasso</strong> → when you need a linear model with coefficient interpretation (Projects 17-18)</li>
+        <li>🔹 <strong>Logistic Regression</strong> → when you need probability calibration and simplicity (Project 10)</li>
+        <li>🔹 <strong>OOB score</strong> → quick validation estimate, especially useful with small datasets</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you need a model that explains WHY — Random Forest is harder to interpret than linear models</li>
+        <li>🚫 For extrapolation — Random Forest cannot predict values outside the training range</li>
+        <li>🚫 When training time matters — 500 trees take 500× longer than one tree</li>
+        <li>🚫 When you need very fast inference — each prediction requires traversing all trees</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Bagging — The Foundation</h3>
+    <ul>
+        <li>Create B bootstrap samples (random samples with replacement from training data)</li>
+        <li>Train one tree on each bootstrap sample</li>
+        <li>For classification: majority vote. For regression: average predictions</li>
+        <li>Key insight: averaging reduces variance without increasing bias</li>
+    </ul>
+
+    <h3>Random Feature Subsets — What Makes It a "Random" Forest</h3>
+    <ul>
+        <li>At each split, only consider <code>max_features</code> random features (default: √p for classification, p/3 for regression)</li>
+        <li>This decorrelates the trees — if one feature dominates, not every tree uses it at the top</li>
+        <li>More diverse trees → errors cancel out more effectively when averaged</li>
+    </ul>
+
+    <h3>Out-of-Bag (OOB) Error</h3>
+    <ul>
+        <li>Each bootstrap sample uses ~63.2% of the data (some samples are repeated)</li>
+        <li>The remaining ~36.8% are "out-of-bag" for that tree</li>
+        <li>For each sample, predict using only trees where it was OOB → free validation estimate</li>
+        <li>OOB error ≈ cross-validation error — no need for a separate validation set</li>
+    </ul>
+
+    <h3>Feature Importance — Mean Decrease in Impurity</h3>
+    <ul>
+        <li>For each feature, sum the total reduction in Gini impurity (Project 12) across all splits in all trees</li>
+        <li>Features that create the best splits get higher importance scores</li>
+        <li>Normalized to sum to 1.0</li>
+        <li>Caveat: biased toward high-cardinality features — permutation importance is more reliable (covered in Project 41)</li>
+    </ul>
+
+    <h3>Why More Trees Don't Overfit</h3>
+    <ul>
+        <li>Each additional tree is trained on a different bootstrap sample</li>
+        <li>Adding more trees reduces variance (averaging effect) without changing bias</li>
+        <li>Unlike polynomial degree (Project 20), n_estimators has no overfitting risk — only diminishing returns</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Too few trees</strong> — variance reduction requires many trees; 100 is a minimum</li>
+        <li>⚠️ <strong>Trusting feature importance blindly</strong> — correlated features split importance between them</li>
+        <li>⚠️ <strong>Not setting random_state</strong> — results vary between runs (fine for production, bad for debugging)</li>
+        <li>⚠️ <strong>Using Random Forest for extrapolation</strong> — it predicts the nearest training value, not beyond</li>
+        <li>⚠️ <strong>Ignoring max_depth</strong> — very deep trees in the forest can still memorize noise; consider limiting depth</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Training: O(B × n × p × log(n)) where B = number of trees — parallelizable with n_jobs=-1</li>
+        <li>Prediction: O(B × depth) per sample — all trees must be traversed</li>
+        <li>Memory: stores all B trees — can be large with many deep trees</li>
+        <li>n_jobs=-1 uses all CPU cores — Random Forest is embarrassingly parallel</li>
+        <li>For very large datasets, consider subsampling (max_samples parameter) or fewer trees</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Feature importance gives a global ranking of feature relevance</li>
+        <li>✅ OOB score provides a trustworthy performance estimate</li>
+        <li>⚠️ Individual predictions are hard to explain — "500 trees voted, 340 said default"</li>
+        <li>⚠️ Feature importance doesn't tell you the direction of the effect (positive or negative)</li>
+        <li>⚠️ For per-prediction explanations, use SHAP values (covered in Project 27)</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import classification_report, accuracy_score, f1_score
+from sklearn.datasets import make_classification
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic credit scoring data ───
+X, y = make_classification(n_samples=2000, n_features=10, n_informative=6,
+                           n_redundant=2, n_clusters_per_class=2,
+                           flip_y=0.05, random_state=42)
+feature_names = ['income', 'debt_ratio', 'credit_history', 'open_accounts',
+                 'inquiries', 'employment_yrs', 'loan_amount', 'age',
+                 'redundant_1', 'redundant_2']
+
+print(f"=== Credit Scoring Dataset ===")
+print(f"  Samples: {len(y)}, Features: {X.shape[1]}")
+print(f"  Default rate: {np.mean(y):.1%}")
+
+# ─── Step 2: Single tree instability ───
+print(f"\n=== Single Tree Instability ===")
+for seed in range(5):
+    tree = DecisionTreeClassifier(random_state=seed)
+    scores = cross_val_score(tree, X, y, cv=5, scoring='f1')
+    print(f"  Seed {seed}: F1 = {scores.mean():.4f} ± {scores.std():.4f}")
+
+# ─── Step 3: Random Forest — stable and better ───
+print(f"\n=== Random Forest Stability ===")
+for seed in range(5):
+    rf = RandomForestClassifier(n_estimators=200, random_state=seed, n_jobs=-1)
+    scores = cross_val_score(rf, X, y, cv=5, scoring='f1')
+    print(f"  Seed {seed}: F1 = {scores.mean():.4f} ± {scores.std():.4f}")
+
+# ─── Step 4: Single tree vs Forest comparison ───
+print(f"\n=== Head-to-Head: Single Tree vs Random Forest ===")
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+models = [
+    ('Single Tree (no limit)', DecisionTreeClassifier(random_state=42)),
+    ('Single Tree (depth=5)', DecisionTreeClassifier(max_depth=5, random_state=42)),
+    ('RF (10 trees)', RandomForestClassifier(n_estimators=10, random_state=42, n_jobs=-1)),
+    ('RF (100 trees)', RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)),
+    ('RF (500 trees)', RandomForestClassifier(n_estimators=500, random_state=42, n_jobs=-1)),
+]
+
+for name, model in models:
+    scores = cross_val_score(model, X, y, cv=cv, scoring='f1')
+    print(f"  {name:>25}: F1 = {scores.mean():.4f} ± {scores.std():.4f}")
+
+# ─── Step 5: OOB score — free validation ───
+rf_oob = RandomForestClassifier(n_estimators=300, oob_score=True, random_state=42, n_jobs=-1)
+rf_oob.fit(X, y)
+print(f"\n=== Out-of-Bag Score ===")
+print(f"  OOB accuracy: {rf_oob.oob_score_:.4f}")
+print(f"  (This is a free validation estimate — no separate test set needed)")
+
+# ─── Step 6: Feature importance ───
+importances = rf_oob.feature_importances_
+sorted_idx = np.argsort(importances)[::-1]
+
+print(f"\n=== Feature Importance (Mean Decrease in Impurity) ===")
+for i in sorted_idx:
+    bar = "█" * int(importances[i] * 50)
+    print(f"  {feature_names[i]:>16}: {importances[i]:.4f} {bar}")
+
+# ─── Step 7: Visualization ───
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+# Plot 1: Feature importance
+axes[0].barh(range(len(feature_names)), importances[sorted_idx], color='#58a6ff', alpha=0.8)
+axes[0].set_yticks(range(len(feature_names)))
+axes[0].set_yticklabels([feature_names[i] for i in sorted_idx])
+axes[0].set_xlabel('Importance')
+axes[0].set_title('Feature Importance')
+axes[0].grid(True, alpha=0.2, axis='x')
+
+# Plot 2: n_estimators vs OOB error
+n_trees_range = [1, 5, 10, 25, 50, 100, 200, 300, 500]
+oob_errors = []
+for n in n_trees_range:
+    rf_temp = RandomForestClassifier(n_estimators=n, oob_score=True,
+                                      random_state=42, n_jobs=-1)
+    rf_temp.fit(X, y)
+    oob_errors.append(1 - rf_temp.oob_score_)
+
+axes[1].plot(n_trees_range, oob_errors, 'o-', color='#f0883e', linewidth=2)
+axes[1].set_xlabel('Number of Trees')
+axes[1].set_ylabel('OOB Error Rate')
+axes[1].set_title('More Trees → Lower Error (Diminishing Returns)')
+axes[1].grid(True, alpha=0.2)
+
+# Plot 3: Single tree vs Forest variance
+n_runs = 20
+tree_scores = []
+rf_scores = []
+for seed in range(n_runs):
+    tree = DecisionTreeClassifier(random_state=seed)
+    scores_t = cross_val_score(tree, X, y, cv=3, scoring='f1')
+    tree_scores.append(scores_t.mean())
+
+    rf = RandomForestClassifier(n_estimators=100, random_state=seed, n_jobs=-1)
+    scores_r = cross_val_score(rf, X, y, cv=3, scoring='f1')
+    rf_scores.append(scores_r.mean())
+
+axes[2].boxplot([tree_scores, rf_scores], labels=['Single Tree', 'Random Forest (100)'])
+axes[2].set_ylabel('F1 Score')
+axes[2].set_title('Variance: Single Tree vs Forest')
+axes[2].grid(True, alpha=0.2, axis='y')
+
+plt.tight_layout()
+plt.savefig('project_21_random_forest.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Plots saved as project_21_random_forest.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Random Forest = many decision trees trained on random data subsets with random feature subsets</li>
+        <li>Averaging many diverse trees reduces variance without increasing bias</li>
+        <li>OOB score gives a free validation estimate — each sample is predicted by trees that didn't train on it</li>
+        <li>Feature importance ranks which features drive predictions (but doesn't show direction)</li>
+        <li>More trees rarely hurt — only diminishing returns and slower training</li>
+        <li>No feature scaling needed — tree-based models are scale-invariant</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 22</h3>
+    <ul>
+        <li>Random Forest has hyperparameters: n_estimators, max_depth, max_features, min_samples_split...</li>
+        <li>How do you find the best combination? Trying all manually is impractical</li>
+        <li>Project 22 introduces <strong>GridSearchCV and RandomizedSearchCV</strong> — systematic hyperparameter tuning</li>
+        <li>We'll search over the hyperparameter space and use cross-validation to find the optimal configuration</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_20.html">← Project 20: Polynomial Features</a>
+    <a href="project_22.html">Project 22: Hyperparameter Tuning →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

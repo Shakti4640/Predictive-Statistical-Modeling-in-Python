@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 1 — Will It Rain Tomorrow? Predicting Binary Weather Outcomes</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --heading: #58a6ff;
+            --accent: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --purple: #bc8cff;
+            --code-bg: #0d1117;
+            --link: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge {
+            display: inline-block;
+            background: #1f6feb33;
+            color: var(--heading);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            color: #e6edf3;
+        }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge {
+            background: linear-gradient(135deg, #1f6feb22, #bc8cff22);
+            border: 1px solid var(--purple);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 1 — Very Easy</span>
+<h1>Project 1: Will It Rain Tomorrow? Predicting Binary Weather Outcomes</h1>
+<p>
+    <span class="tag">numpy arrays</span>
+    <span class="tag">input/output thinking</span>
+    <span class="tag">train/test split</span>
+    <span class="tag">what is a model</span>
+</p>
+<p class="difficulty">Difficulty: Very Easy &nbsp;|&nbsp; Dependency: None (Starting Point)</p>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work at a small weather station in a rural town</li>
+        <li>Farmers call every evening asking: <strong>"Will it rain tomorrow?"</strong></li>
+        <li>You have a notebook with 30 days of data: humidity (%) and whether it rained the next day (Yes=1, No=0)</li>
+        <li>Goal → build the simplest possible "model" that takes humidity as input and outputs a rain prediction</li>
+        <li>No libraries beyond numpy at first — understand what a model actually IS before using sklearn</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Frame the question as: <strong>Input → Process → Output</strong>
+            <ul>
+                <li>Input: a single number (humidity %)</li>
+                <li>Process: some rule or function</li>
+                <li>Output: 0 (no rain) or 1 (rain)</li>
+            </ul>
+        </li>
+        <li>Start with the dumbest possible model — a fixed threshold
+            <ul>
+                <li>If humidity &gt; 70 → predict rain</li>
+                <li>Otherwise → predict no rain</li>
+            </ul>
+        </li>
+        <li>Measure how often this dumb model is correct → that's accuracy</li>
+        <li>Then ask: can we find a BETTER threshold from the data itself?</li>
+        <li>This is the birth of "learning from data" — the core of all modeling</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Create synthetic data with numpy (30 days of humidity + rain labels)</li>
+        <li>Split data into two parts:
+            <ul>
+                <li><strong>Training set</strong> (first 20 days) → used to find the best threshold</li>
+                <li><strong>Test set</strong> (last 10 days) → used to check if the threshold works on unseen data</li>
+            </ul>
+        </li>
+        <li>Loop through candidate thresholds (50, 55, 60, 65, 70, 75, 80) on training data</li>
+        <li>Pick the threshold that gives highest accuracy on training data</li>
+        <li>Apply that threshold to test data → report test accuracy</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always split data BEFORE looking at performance — never evaluate on training data alone</li>
+        <li>✅ Start with the simplest model possible — a threshold is a valid model</li>
+        <li>✅ Understand that a "model" is just a function: f(input) → output</li>
+        <li>✅ Use numpy arrays instead of Python lists — they are faster and support vectorized operations</li>
+        <li>✅ Print intermediate results to build intuition (predictions vs actuals)</li>
+        <li>✅ Think about what "accuracy" actually means: correct predictions / total predictions</li>
+        <li>✅ Recognize that even a coin flip gives 50% accuracy — your model must beat that</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT jump to sklearn or complex algorithms — understand the fundamentals first</li>
+        <li>❌ Do NOT evaluate your model on the same data you trained on — this gives a falsely optimistic score</li>
+        <li>❌ Do NOT hardcode a threshold without checking alternatives — let the data guide you</li>
+        <li>❌ Do NOT ignore the class distribution — if it rains 90% of days, always predicting "rain" gives 90% accuracy but is useless</li>
+        <li>❌ Do NOT confuse correlation with a model — just because humidity and rain are related doesn't mean any threshold works well</li>
+        <li>❌ Do NOT use pandas or complex structures yet — keep it raw numpy to see what's happening</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Threshold-based model</strong> → when you have ONE numeric feature and a binary outcome</li>
+        <li>🔹 <strong>numpy arrays</strong> → when you need fast, vectorized numeric operations</li>
+        <li>🔹 <strong>Train/test split</strong> → ALWAYS, for any model, no exceptions</li>
+        <li>🔹 <strong>Accuracy metric</strong> → when classes are roughly balanced (similar number of rain vs no-rain days)</li>
+        <li>🔹 <strong>Manual threshold search</strong> → when you want to understand what "learning" means before automating it</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Threshold model fails when the relationship is non-linear (e.g., rain happens at both very low AND very high humidity)</li>
+        <li>🚫 Single-feature models fail when the outcome depends on multiple factors (humidity + wind + pressure)</li>
+        <li>🚫 Accuracy is misleading when classes are imbalanced — if 95% of days are sunny, predicting "no rain" always gives 95% accuracy</li>
+        <li>🚫 Manual threshold search doesn't scale — with 100 features, you can't loop through all combinations</li>
+        <li>🚫 This approach assumes a sharp cutoff exists — real-world boundaries are often fuzzy</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>What is a Model?</h3>
+    <ul>
+        <li>A model is a <strong>function</strong> that maps inputs to outputs</li>
+        <li>In this project: <code>f(humidity) → 0 or 1</code></li>
+        <li>The "learning" part is finding the best parameter (threshold) from data</li>
+    </ul>
+
+    <h3>What is a Threshold Model?</h3>
+    <ul>
+        <li>The simplest possible classifier</li>
+        <li>Rule: if <code>x &gt; threshold</code> → class 1, else → class 0</li>
+        <li>The threshold is the ONLY parameter — this model has exactly one knob to tune</li>
+    </ul>
+
+    <h3>What is Train/Test Split?</h3>
+    <ul>
+        <li>Training data → the model "sees" this data and learns from it</li>
+        <li>Test data → the model has NEVER seen this data — it's the honest exam</li>
+        <li>Why? → A model can memorize training data perfectly but fail on new data</li>
+        <li>Analogy: studying from a textbook (training) vs taking the actual exam (testing)</li>
+    </ul>
+
+    <h3>What is Accuracy?</h3>
+    <ul>
+        <li><code>accuracy = number of correct predictions / total predictions</code></li>
+        <li>Range: 0.0 (all wrong) to 1.0 (all correct)</li>
+        <li>Baseline: random guessing gives ~50% for balanced binary problems</li>
+    </ul>
+
+    <h3>How the Threshold Search Works</h3>
+    <ol>
+        <li>Define candidate thresholds: [50, 55, 60, 65, 70, 75, 80]</li>
+        <li>For each threshold, predict on training data</li>
+        <li>Compare predictions to actual labels → compute accuracy</li>
+        <li>Pick the threshold with highest training accuracy</li>
+        <li>Apply that threshold to test data → get honest accuracy</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Data leakage</strong> — accidentally including test data when choosing the threshold → inflated accuracy</li>
+        <li>⚠️ <strong>Too few candidates</strong> — testing only 3 thresholds might miss the optimal one</li>
+        <li>⚠️ <strong>Overfitting to training data</strong> — the best training threshold might not be the best test threshold</li>
+        <li>⚠️ <strong>Ignoring class balance</strong> — if 80% of days are "no rain", a model that always says "no rain" gets 80% accuracy</li>
+        <li>⚠️ <strong>Confusing training accuracy with real performance</strong> — always report test accuracy</li>
+        <li>⚠️ <strong>Not setting a random seed</strong> — results change every run, making debugging impossible</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>This threshold approach works for tiny datasets (30–1000 rows) with 1 feature</li>
+        <li>With 1 million rows → still fast because numpy vectorizes the comparison</li>
+        <li>With 100 features → this approach breaks down completely (need multi-dimensional models)</li>
+        <li>With 1000 candidate thresholds → still O(n × t) where n=rows, t=thresholds — manageable</li>
+        <li>Memory: numpy arrays of 1M floats ≈ 8 MB — no issue</li>
+        <li>This is a teaching model, not a production model — it shows the CONCEPT of learning</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ <strong>Fully interpretable</strong> — you can explain it to anyone: "if humidity is above X%, I predict rain"</li>
+        <li>✅ One parameter (threshold) → one sentence explanation</li>
+        <li>✅ No black box — every prediction can be traced to the threshold rule</li>
+        <li>✅ Stakeholders (farmers) can understand and trust this model</li>
+        <li>⚠️ Interpretability comes at the cost of flexibility — this model can't capture complex patterns</li>
+        <li>⚠️ As models get more powerful (later projects), interpretability decreases — this tradeoff is fundamental</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+
+# ─── Step 1: Create synthetic weather data ───
+np.random.seed(42)
+
+# 30 days of humidity readings (40% to 95%)
+humidity = np.random.uniform(40, 95, size=30)
+
+# Rain label: higher humidity → higher chance of rain
+# Simple rule with noise: rain if humidity > 65 (with some randomness)
+noise = np.random.normal(0, 10, size=30)
+rain = (humidity + noise > 68).astype(int)
+
+print("=== Raw Data (first 10 days) ===")
+for i in range(10):
+    print(f"  Day {i+1}: Humidity={humidity[i]:.1f}%  Rain={rain[i]}")
+
+# ─── Step 2: Train/Test Split ───
+# First 20 days → training
+# Last 10 days → testing
+X_train, y_train = humidity[:20], rain[:20]
+X_test, y_test = humidity[20:], rain[20:]
+
+print(f"\nTraining samples: {len(X_train)}")
+print(f"Test samples:     {len(X_test)}")
+
+# ─── Step 3: Find the best threshold on training data ───
+candidate_thresholds = np.arange(45, 85, 5)  # [45, 50, 55, ..., 80]
+best_threshold = None
+best_train_accuracy = 0
+
+print("\n=== Threshold Search (Training Data) ===")
+for threshold in candidate_thresholds:
+    # Predict: if humidity > threshold → rain (1), else → no rain (0)
+    predictions = (X_train > threshold).astype(int)
+
+    # Accuracy: how many predictions match actual labels
+    accuracy = np.mean(predictions == y_train)
+
+    print(f"  Threshold={threshold:.0f}%  →  Training Accuracy={accuracy:.2%}")
+
+    if accuracy > best_train_accuracy:
+        best_train_accuracy = accuracy
+        best_threshold = threshold
+
+print(f"\n✅ Best threshold: {best_threshold:.0f}%  (Training Accuracy: {best_train_accuracy:.2%})")
+
+# ─── Step 4: Evaluate on test data (the honest exam) ───
+test_predictions = (X_test > best_threshold).astype(int)
+test_accuracy = np.mean(test_predictions == y_test)
+
+print(f"\n=== Test Set Evaluation ===")
+print(f"  Threshold used: {best_threshold:.0f}%")
+print(f"  Test Accuracy:  {test_accuracy:.2%}")
+
+# ─── Step 5: Show predictions vs actuals ───
+print("\n=== Predictions vs Actuals (Test Set) ===")
+for i in range(len(X_test)):
+    status = "✓" if test_predictions[i] == y_test[i] else "✗"
+    print(f"  Day {21+i}: Humidity={X_test[i]:.1f}%  Predicted={test_predictions[i]}  Actual={y_test[i]}  {status}")
+
+# ─── Step 6: Baseline comparison ───
+# What if we always predicted the most common class?
+most_common = int(np.round(np.mean(y_train)))
+baseline_accuracy = np.mean(most_common == y_test)
+print(f"\n=== Baseline (always predict {most_common}) ===")
+print(f"  Baseline Accuracy: {baseline_accuracy:.2%}")
+print(f"  Our Model:         {test_accuracy:.2%}")
+print(f"  Improvement:       {test_accuracy - baseline_accuracy:+.2%}")
+</code></pre>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>A model is just a function: <code>f(input) → output</code></li>
+        <li>Learning = finding the best parameter(s) from data</li>
+        <li>Always split data into train/test BEFORE evaluating</li>
+        <li>Accuracy = correct / total — but only meaningful on unseen test data</li>
+        <li>Even the simplest threshold model teaches the entire modeling workflow: data → split → train → evaluate</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 2</h3>
+    <ul>
+        <li>This project predicted a <strong>category</strong> (rain or no rain) — that's classification</li>
+        <li>What if the output is a <strong>continuous number</strong> instead? (e.g., predicting a student's exact score)</li>
+        <li>That's <strong>regression</strong> — and Project 2 introduces Simple Linear Regression</li>
+        <li>Instead of a threshold, we'll learn a <strong>line</strong> (slope + intercept) that best fits the data</li>
+        <li>The concept of "finding the best parameter" stays the same — but the model gets richer</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <span>← No previous project</span>
+    <a href="project_02.html">Project 2: Predicting a Student's Score →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

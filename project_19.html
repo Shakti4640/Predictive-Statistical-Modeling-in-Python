@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 19 — Detecting Fraudulent Transactions — Handling Class Imbalance</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 19: Detecting Fraudulent Transactions — Handling Class Imbalance</h1>
+<p>
+    <span class="tag">Class Imbalance</span>
+    <span class="tag">SMOTE</span>
+    <span class="tag">class_weight</span>
+    <span class="tag">Precision-Recall</span>
+    <span class="tag">F1 Score</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Projects 10, 15, 16</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work at a payment processing company building a fraud detection system</li>
+        <li>Dataset: 100,000 transactions — 99,200 legitimate (99.2%), 800 fraudulent (0.8%)</li>
+        <li>Features: transaction amount, time of day, merchant category, distance from home, device type (engineered in Project 16 style)</li>
+        <li>A model that always predicts "not fraud" gets 99.2% accuracy — but catches zero fraud</li>
+        <li>Goal → build a model that actually catches fraud while keeping false alarms manageable</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recognize that accuracy is misleading with imbalanced classes (Project 10 introduced precision/recall — now we see why they matter)</li>
+        <li>Understand the tradeoff: catching more fraud (recall) means more false alarms (lower precision)</li>
+        <li>Three strategies to handle imbalance: resampling (SMOTE), cost-sensitive learning (class_weight), threshold tuning</li>
+        <li>Evaluate with precision-recall curve and F1 score — NOT accuracy</li>
+        <li>Use StratifiedKFold (Project 15) to ensure each fold preserves the class ratio</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Create imbalanced fraud dataset</li>
+        <li>Show why accuracy fails — baseline model gets 99%+ but catches nothing</li>
+        <li>Apply SMOTE to oversample the minority class</li>
+        <li>Use class_weight='balanced' as an alternative</li>
+        <li>Plot precision-recall curves for each strategy</li>
+        <li>Compare F1 scores across all approaches</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use stratified splits — StratifiedKFold preserves class ratios (Project 15)</li>
+        <li>✅ Evaluate with precision, recall, F1, and PR-AUC — not accuracy</li>
+        <li>✅ Apply SMOTE only to training data — never to test data</li>
+        <li>✅ Try class_weight='balanced' first — it's simpler and often works well</li>
+        <li>✅ Consider the business cost: is a missed fraud worse than a false alarm?</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use accuracy as your metric — it's meaningless with 99:1 imbalance</li>
+        <li>❌ Do NOT apply SMOTE to the entire dataset before splitting — this leaks synthetic data into the test set</li>
+        <li>❌ Do NOT oversample to exact 50:50 without thinking — sometimes 70:30 works better</li>
+        <li>❌ Do NOT ignore the precision-recall tradeoff — you must choose where on the curve to operate</li>
+        <li>❌ Do NOT use ROC-AUC alone — it can look great even when precision is terrible on imbalanced data</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>class_weight='balanced'</strong> → simplest approach, adjusts loss function to penalize minority errors more</li>
+        <li>🔹 <strong>SMOTE</strong> → when you want to generate synthetic minority samples for training</li>
+        <li>🔹 <strong>Random undersampling</strong> → when majority class is very large and you can afford to lose data</li>
+        <li>🔹 <strong>Threshold tuning</strong> → when you want to control the precision-recall tradeoff directly</li>
+        <li>🔹 <strong>PR-AUC</strong> → primary metric for imbalanced classification</li>
+        <li>🔹 <strong>F1 score</strong> → single number balancing precision and recall</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 SMOTE with very high-dimensional sparse data — synthetic samples may not be meaningful</li>
+        <li>🚫 Oversampling when the minority class has very few samples (&lt;10) — not enough to interpolate from</li>
+        <li>🚫 class_weight with models that don't support it (check documentation)</li>
+        <li>🚫 Aggressive oversampling when the minority class is noisy — you amplify the noise</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Why Accuracy Fails With Imbalance</h3>
+    <ul>
+        <li>With 99:1 ratio, predicting majority class always gives 99% accuracy</li>
+        <li>The model learns to ignore the minority class — it's "cheaper" to always predict majority</li>
+        <li>The loss function treats all errors equally — missing 1 fraud costs the same as 1 false alarm</li>
+    </ul>
+
+    <h3>SMOTE — Synthetic Minority Over-sampling Technique</h3>
+    <ul>
+        <li>For each minority sample, find its k nearest minority neighbors (default k=5)</li>
+        <li>Pick a random neighbor, draw a random point on the line between them</li>
+        <li>This creates synthetic samples that are interpolations of real minority samples</li>
+        <li>Result: minority class grows without exact duplication</li>
+        <li>Critical: apply ONLY to training data — test data must reflect real-world distribution</li>
+    </ul>
+
+    <h3>class_weight='balanced' — Cost-Sensitive Learning</h3>
+    <ul>
+        <li>Adjusts the loss function: <code>weight_class = n_samples / (n_classes × n_samples_class)</code></li>
+        <li>Minority class gets higher weight — misclassifying fraud costs more in the loss</li>
+        <li>No synthetic data created — just changes how errors are penalized</li>
+        <li>Simpler than SMOTE, no risk of creating unrealistic synthetic samples</li>
+    </ul>
+
+    <h3>Precision-Recall Tradeoff</h3>
+    <ul>
+        <li>Precision: of all predicted fraud, how many are actually fraud? (false alarm rate)</li>
+        <li>Recall: of all actual fraud, how many did we catch? (detection rate)</li>
+        <li>Lowering the threshold → more fraud caught (higher recall) → more false alarms (lower precision)</li>
+        <li>The PR curve shows all possible operating points — choose based on business needs</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>SMOTE before train/test split</strong> — synthetic test samples leak training information, inflating scores</li>
+        <li>⚠️ <strong>Reporting only accuracy</strong> — stakeholders think the model works, but it catches no fraud</li>
+        <li>⚠️ <strong>Over-relying on ROC-AUC</strong> — with severe imbalance, ROC can be 0.95+ while precision at useful recall is 10%</li>
+        <li>⚠️ <strong>Not considering business costs</strong> — a missed $10,000 fraud is not the same as a false alarm on a $5 purchase</li>
+        <li>⚠️ <strong>SMOTE on test data</strong> — test set must reflect real-world class distribution</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>SMOTE requires computing k-nearest neighbors — O(n²) for minority class, can be slow with large minority sets</li>
+        <li>class_weight='balanced' has zero computational overhead — just changes the loss weights</li>
+        <li>For very large datasets, consider random undersampling of majority class — faster than oversampling</li>
+        <li>SMOTE variants (BorderlineSMOTE, ADASYN) focus on harder samples but are more expensive</li>
+        <li>With millions of transactions, subsample the majority class rather than oversample the minority</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Precision and recall are intuitive to stakeholders: "we catch 85% of fraud with 20% false alarm rate"</li>
+        <li>✅ The PR curve lets you show the tradeoff visually to decision-makers</li>
+        <li>⚠️ SMOTE changes the training distribution — model coefficients reflect the resampled data, not reality</li>
+        <li>⚠️ class_weight changes the effective loss — coefficients are still interpretable but optimized for a different objective</li>
+        <li>⚠️ Threshold choice is a business decision, not a statistical one — involve stakeholders</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.metrics import (classification_report, precision_recall_curve,
+                             average_precision_score, f1_score, accuracy_score)
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Create imbalanced fraud dataset ───
+X, y = make_classification(n_samples=10000, n_features=15, n_informative=8,
+                           n_redundant=3, n_classes=2, weights=[0.98, 0.02],
+                           flip_y=0.01, random_state=42)
+
+print(f"=== Dataset ===")
+print(f"  Total samples: {len(y)}")
+print(f"  Legitimate (0): {np.sum(y == 0)} ({np.mean(y == 0)*100:.1f}%)")
+print(f"  Fraud (1):      {np.sum(y == 1)} ({np.mean(y == 1)*100:.1f}%)")
+
+# ─── Step 2: Baseline — show accuracy is misleading ───
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, stratify=y, random_state=42)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+# Naive model — no imbalance handling
+baseline = LogisticRegression(random_state=42, max_iter=1000)
+baseline.fit(X_train_s, y_train)
+y_pred_base = baseline.predict(X_test_s)
+
+print(f"\n=== Baseline (no imbalance handling) ===")
+print(f"  Accuracy: {accuracy_score(y_test, y_pred_base):.4f}  ← looks great!")
+print(f"  F1 (fraud): {f1_score(y_test, y_pred_base):.4f}  ← reality check")
+print(classification_report(y_test, y_pred_base, target_names=['Legit', 'Fraud']))
+
+# ─── Step 3: Strategy 1 — class_weight='balanced' ───
+weighted = LogisticRegression(class_weight='balanced', random_state=42, max_iter=1000)
+weighted.fit(X_train_s, y_train)
+y_pred_w = weighted.predict(X_test_s)
+
+print(f"=== Strategy 1: class_weight='balanced' ===")
+print(f"  Accuracy: {accuracy_score(y_test, y_pred_w):.4f}")
+print(f"  F1 (fraud): {f1_score(y_test, y_pred_w):.4f}")
+print(classification_report(y_test, y_pred_w, target_names=['Legit', 'Fraud']))
+
+# ─── Step 4: Strategy 2 — SMOTE ───
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline as ImbPipeline
+
+smote = SMOTE(random_state=42)
+X_train_sm, y_train_sm = smote.fit_resample(X_train_s, y_train)
+print(f"=== Strategy 2: SMOTE ===")
+print(f"  Before SMOTE: {np.sum(y_train == 0)} legit, {np.sum(y_train == 1)} fraud")
+print(f"  After SMOTE:  {np.sum(y_train_sm == 0)} legit, {np.sum(y_train_sm == 1)} fraud")
+
+smote_model = LogisticRegression(random_state=42, max_iter=1000)
+smote_model.fit(X_train_sm, y_train_sm)
+y_pred_sm = smote_model.predict(X_test_s)
+
+print(f"  Accuracy: {accuracy_score(y_test, y_pred_sm):.4f}")
+print(f"  F1 (fraud): {f1_score(y_test, y_pred_sm):.4f}")
+print(classification_report(y_test, y_pred_sm, target_names=['Legit', 'Fraud']))
+
+# ─── Step 5: Precision-Recall curves ───
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+models_for_pr = {
+    'Baseline': baseline,
+    'class_weight': weighted,
+    'SMOTE': smote_model,
+}
+
+for name, model in models_for_pr.items():
+    y_scores = model.predict_proba(X_test_s)[:, 1]
+    precision, recall, _ = precision_recall_curve(y_test, y_scores)
+    ap = average_precision_score(y_test, y_scores)
+    axes[0].plot(recall, precision, label=f'{name} (AP={ap:.3f})')
+
+axes[0].set_xlabel('Recall (fraud detection rate)')
+axes[0].set_ylabel('Precision (1 - false alarm rate)')
+axes[0].set_title('Precision-Recall Curves')
+axes[0].legend()
+axes[0].grid(True, alpha=0.2)
+
+# ─── Step 6: F1 score comparison bar chart ───
+strategies = ['Baseline', 'class_weight', 'SMOTE']
+f1_scores = [
+    f1_score(y_test, y_pred_base),
+    f1_score(y_test, y_pred_w),
+    f1_score(y_test, y_pred_sm),
+]
+accuracies = [
+    accuracy_score(y_test, y_pred_base),
+    accuracy_score(y_test, y_pred_w),
+    accuracy_score(y_test, y_pred_sm),
+]
+
+x = np.arange(len(strategies))
+axes[1].bar(x - 0.15, accuracies, 0.3, label='Accuracy', color='#58a6ff', alpha=0.7)
+axes[1].bar(x + 0.15, f1_scores, 0.3, label='F1 (Fraud)', color='#f0883e', alpha=0.7)
+axes[1].set_xticks(x)
+axes[1].set_xticklabels(strategies)
+axes[1].set_ylabel('Score')
+axes[1].set_title('Accuracy vs F1: Why Accuracy Lies')
+axes[1].legend()
+axes[1].grid(True, alpha=0.2, axis='y')
+
+plt.tight_layout()
+plt.savefig('project_19_imbalance_comparison.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Plots saved as project_19_imbalance_comparison.png")
+
+# ─── Step 7: Cross-validated comparison with imblearn pipeline ───
+print(f"\n=== Stratified CV Comparison ===")
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+pipe_base = Pipeline([('s', StandardScaler()), ('m', LogisticRegression(max_iter=1000, random_state=42))])
+pipe_weighted = Pipeline([('s', StandardScaler()),
+                          ('m', LogisticRegression(class_weight='balanced', max_iter=1000, random_state=42))])
+pipe_smote = ImbPipeline([('s', StandardScaler()), ('smote', SMOTE(random_state=42)),
+                           ('m', LogisticRegression(max_iter=1000, random_state=42))])
+
+for name, pipe in [('Baseline', pipe_base), ('class_weight', pipe_weighted), ('SMOTE', pipe_smote)]:
+    scores = cross_val_score(pipe, X, y, cv=cv, scoring='f1')
+    print(f"  {name:>14}: F1 = {scores.mean():.4f} ± {scores.std():.4f}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Accuracy is meaningless with imbalanced classes — use F1, precision, recall, and PR-AUC</li>
+        <li>class_weight='balanced' is the simplest fix — adjusts the loss function, no synthetic data</li>
+        <li>SMOTE creates synthetic minority samples — apply ONLY to training data</li>
+        <li>The precision-recall tradeoff is a business decision — where on the curve you operate depends on costs</li>
+        <li>Always use StratifiedKFold (Project 15) to preserve class ratios in cross-validation</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 20</h3>
+    <ul>
+        <li>All our regression models so far assume linear relationships between features and target</li>
+        <li>Project 20 introduces <strong>polynomial features</strong> — capturing nonlinear patterns like curves and interactions</li>
+        <li>We'll see how adding polynomial terms can dramatically improve fit — but also how high-degree polynomials overfit catastrophically</li>
+        <li>This connects back to the bias-variance tradeoff from Project 8 and regularization from Project 17</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_18.html">← Project 18: Lasso — Sparse Feature Selection</a>
+    <a href="project_20.html">Project 20: Polynomial Features →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

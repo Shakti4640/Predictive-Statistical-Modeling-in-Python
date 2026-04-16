@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 31 — XGBoost vs LightGBM — Head-to-Head on a Real Dataset</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 31: XGBoost vs LightGBM — Head-to-Head on a Real Dataset</h1>
+<p>
+    <span class="tag">XGBoost</span>
+    <span class="tag">LightGBM</span>
+    <span class="tag">GOSS</span>
+    <span class="tag">EFB</span>
+    <span class="tag">Early Stopping</span>
+    <span class="tag">Benchmark Discipline</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 23, 22</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a data scientist at an e-commerce company predicting whether a customer will convert after visiting a product page</li>
+        <li>Dataset: 100,000 sessions with 50 features — browsing duration, device type, referral source, past purchase count, etc.</li>
+        <li>Your GradientBoostingClassifier from Project 23 works but takes 20 minutes to train and hyperparameter tuning (Project 22) is painfully slow</li>
+        <li>Your manager asks: "Can we get the same accuracy but train in under a minute?"</li>
+        <li>Goal → compare XGBoost and LightGBM head-to-head with proper benchmark discipline to pick the right tool</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 23: gradient boosting fits trees sequentially on residuals — powerful but slow</li>
+        <li>XGBoost and LightGBM are optimized implementations of the same idea with different engineering choices</li>
+        <li>A fair comparison requires identical data splits, same evaluation metric, and early stopping to prevent overfitting</li>
+        <li>Use the hyperparameter tuning discipline from Project 22 — don't compare default vs tuned</li>
+        <li>Measure both accuracy AND training time — the tradeoff matters in production</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate a realistic classification dataset with mixed feature types</li>
+        <li>Train XGBoost and LightGBM with equivalent hyperparameters</li>
+        <li>Use early stopping on a validation set to find optimal n_estimators automatically</li>
+        <li>Compare AUC-ROC, F1, training time, and memory usage</li>
+        <li>Tune both with RandomizedSearchCV (Project 22) and compare tuned versions</li>
+        <li>Visualize feature importance from both frameworks side by side</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use early stopping — let the model decide when to stop adding trees instead of guessing n_estimators</li>
+        <li>✅ Use the same train/validation/test split for both models — apples-to-apples comparison</li>
+        <li>✅ Set a random seed everywhere — reproducibility is non-negotiable in benchmarks</li>
+        <li>✅ Compare with equivalent hyperparameter budgets — same number of random search iterations</li>
+        <li>✅ Report confidence intervals or CV scores, not single-split results</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT compare default XGBoost vs tuned LightGBM (or vice versa) — unfair benchmark</li>
+        <li>❌ Do NOT ignore training time — a 0.1% accuracy gain that costs 10× training time may not be worth it</li>
+        <li>❌ Do NOT skip early stopping — without it, you're either underfitting or overfitting</li>
+        <li>❌ Do NOT assume one is always better — the winner depends on dataset size, feature types, and constraints</li>
+        <li>❌ Do NOT use accuracy as the sole metric — AUC-ROC and F1 are more informative for imbalanced data (Project 19)</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>XGBoost</strong> → mature ecosystem, excellent for structured/tabular data, strong regularization options</li>
+        <li>🔹 <strong>LightGBM</strong> → faster training on large datasets, handles categorical features natively, lower memory</li>
+        <li>🔹 <strong>sklearn GradientBoosting</strong> → small datasets, educational purposes, when you need Pipeline compatibility (Project 23)</li>
+        <li>🔹 <strong>CatBoost</strong> → when you have many categorical features and don't want to encode them manually</li>
+        <li>🔹 <strong>Random Forest</strong> → when you want a simpler ensemble with less tuning (Project 21)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When your dataset has fewer than 1,000 rows — simpler models (logistic regression, Project 10) often win</li>
+        <li>🚫 When interpretability is the primary goal — use linear models or shallow trees with SHAP (Project 27)</li>
+        <li>🚫 When training data changes every minute — online learning is better than retraining GBMs</li>
+        <li>🚫 When you need probability calibration — GBMs are often poorly calibrated (addressed in Project 33)</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>XGBoost Internals — Beyond Project 23</h3>
+    <ul>
+        <li>XGBoost adds L1 and L2 regularization directly to the objective function (not just tree depth)</li>
+        <li>Uses a second-order Taylor expansion of the loss — fits trees using both gradient AND hessian</li>
+        <li>The split gain formula: <code>Gain = 0.5 * [G_L²/(H_L+λ) + G_R²/(H_R+λ) - (G_L+G_R)²/(H_L+H_R+λ)] - γ</code></li>
+        <li>γ (gamma) prunes splits that don't improve enough — built-in complexity control</li>
+        <li>Column subsampling (like Random Forest's feature bagging) reduces correlation between trees</li>
+        <li>Weighted quantile sketch for approximate split finding — handles large datasets without sorting all values</li>
+    </ul>
+
+    <h3>LightGBM — Leaf-Wise Growth</h3>
+    <ul>
+        <li>XGBoost grows trees level-wise (all nodes at depth d before depth d+1)</li>
+        <li>LightGBM grows leaf-wise — always splits the leaf with the highest loss reduction</li>
+        <li>Leaf-wise growth produces deeper, more asymmetric trees that converge faster</li>
+        <li>Risk: leaf-wise can overfit on small data — use <code>num_leaves</code> and <code>min_data_in_leaf</code> to control</li>
+        <li>Rule of thumb: <code>num_leaves</code> should be less than <code>2^max_depth</code></li>
+    </ul>
+
+    <h3>GOSS — Gradient-based One-Side Sampling</h3>
+    <ul>
+        <li>Key insight: samples with large gradients contribute more to information gain</li>
+        <li>GOSS keeps all samples with large gradients, randomly samples from small-gradient samples</li>
+        <li>Multiplies the small-gradient samples by a weight to compensate for the sampling</li>
+        <li>Result: faster training with minimal accuracy loss — especially on large datasets</li>
+    </ul>
+
+    <h3>EFB — Exclusive Feature Bundling</h3>
+    <ul>
+        <li>Many features are mutually exclusive (rarely non-zero at the same time) — common in one-hot encoded data</li>
+        <li>EFB bundles these features into a single feature, reducing the effective number of features</li>
+        <li>This is why LightGBM handles high-dimensional sparse data efficiently</li>
+        <li>Combined with GOSS, this makes LightGBM significantly faster than XGBoost on large, sparse datasets</li>
+    </ul>
+
+    <h3>Early Stopping — How It Works</h3>
+    <ul>
+        <li>Train on training set, evaluate on a held-out validation set after each boosting round</li>
+        <li>If the validation metric doesn't improve for N rounds (early_stopping_rounds), stop training</li>
+        <li>The model uses the best iteration, not the last one</li>
+        <li>This replaces manual n_estimators tuning — the model finds its own optimal number of trees</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>No early stopping</strong> — training for 1000 rounds when 200 was optimal wastes time and overfits</li>
+        <li>⚠️ <strong>Unfair benchmarks</strong> — comparing tuned XGBoost vs default LightGBM proves nothing</li>
+        <li>⚠️ <strong>Ignoring LightGBM's num_leaves</strong> — the most important parameter; too high = overfitting</li>
+        <li>⚠️ <strong>Using learning_rate=0.1 with 10,000 trees</strong> — lower learning rate needs more trees but generalizes better; use early stopping to balance</li>
+        <li>⚠️ <strong>Not setting eval_metric explicitly</strong> — default metrics differ between frameworks, making comparison unfair</li>
+        <li>⚠️ <strong>Forgetting to pass categorical features to LightGBM</strong> — it handles them natively but only if you tell it</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>LightGBM is typically 2-10× faster than XGBoost on datasets with 100K+ rows</li>
+        <li>LightGBM uses histogram-based splitting (bins continuous features) — O(n_bins) instead of O(n_samples)</li>
+        <li>XGBoost also supports histogram mode (<code>tree_method='hist'</code>) — narrows the speed gap</li>
+        <li>Both support GPU training — XGBoost via <code>tree_method='gpu_hist'</code>, LightGBM via <code>device='gpu'</code></li>
+        <li>For datasets over 10M rows, LightGBM's GOSS sampling provides significant speedup with minimal accuracy loss</li>
+        <li>Both support distributed training for truly massive datasets (Spark, Dask integrations)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Both provide built-in feature importance — but they measure different things (gain vs split count)</li>
+        <li>✅ SHAP (Project 27) works with both — use TreeExplainer for fast, exact Shapley values</li>
+        <li>⚠️ Feature importance from gain can be biased toward high-cardinality features</li>
+        <li>⚠️ Permutation importance (model-agnostic) is more reliable than built-in importance</li>
+        <li>⚠️ With hundreds of trees, the model is a black box — SHAP is essential for explaining individual predictions</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import time
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.metrics import roc_auc_score, f1_score, classification_report
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Generate realistic dataset ───
+np.random.seed(42)
+X, y = make_classification(n_samples=20000, n_features=50,
+                           n_informative=25, n_redundant=10,
+                           n_clusters_per_class=3, flip_y=0.05,
+                           weights=[0.7, 0.3], random_state=42)
+
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, stratify=y, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=42)
+
+print(f"=== Dataset ===")
+print(f"  Train: {X_train.shape[0]}, Val: {X_val.shape[0]}, Test: {X_test.shape[0]}")
+print(f"  Features: {X_train.shape[1]}, Positive rate: {y_train.mean():.1%}")
+
+# ─── Step 2: XGBoost with early stopping ───
+try:
+    from xgboost import XGBClassifier
+
+    xgb_model = XGBClassifier(
+        n_estimators=1000, learning_rate=0.05, max_depth=6,
+        subsample=0.8, colsample_bytree=0.8,
+        reg_alpha=0.1, reg_lambda=1.0,
+        eval_metric='auc', random_state=42, n_jobs=-1
+    )
+
+    start = time.time()
+    xgb_model.fit(X_train, y_train,
+                  eval_set=[(X_val, y_val)],
+                  verbose=False)
+    xgb_time = time.time() - start
+
+    xgb_pred = xgb_model.predict(X_test)
+    xgb_prob = xgb_model.predict_proba(X_test)[:, 1]
+    xgb_auc = roc_auc_score(y_test, xgb_prob)
+    xgb_f1 = f1_score(y_test, xgb_pred)
+    xgb_best = xgb_model.best_iteration if hasattr(xgb_model, 'best_iteration') else 'N/A'
+
+    print(f"\n=== XGBoost Results ===")
+    print(f"  Best iteration: {xgb_best}")
+    print(f"  AUC-ROC: {xgb_auc:.4f}")
+    print(f"  F1 Score: {xgb_f1:.4f}")
+    print(f"  Training time: {xgb_time:.2f}s")
+    xgb_available = True
+except ImportError:
+    print("\n⚠️ XGBoost not installed. Install with: pip install xgboost")
+    xgb_available = False
+
+# ─── Step 3: LightGBM with early stopping ───
+try:
+    from lightgbm import LGBMClassifier
+
+    lgbm_model = LGBMClassifier(
+        n_estimators=1000, learning_rate=0.05, num_leaves=63,
+        subsample=0.8, colsample_bytree=0.8,
+        reg_alpha=0.1, reg_lambda=1.0,
+        min_child_samples=20, random_state=42, n_jobs=-1, verbose=-1
+    )
+
+    start = time.time()
+    lgbm_model.fit(X_train, y_train,
+                   eval_set=[(X_val, y_val)],
+                   callbacks=[__import__('lightgbm').early_stopping(50, verbose=False)])
+    lgbm_time = time.time() - start
+
+    lgbm_pred = lgbm_model.predict(X_test)
+    lgbm_prob = lgbm_model.predict_proba(X_test)[:, 1]
+    lgbm_auc = roc_auc_score(y_test, lgbm_prob)
+    lgbm_f1 = f1_score(y_test, lgbm_pred)
+    lgbm_best = lgbm_model.best_iteration_
+
+    print(f"\n=== LightGBM Results ===")
+    print(f"  Best iteration: {lgbm_best}")
+    print(f"  AUC-ROC: {lgbm_auc:.4f}")
+    print(f"  F1 Score: {lgbm_f1:.4f}")
+    print(f"  Training time: {lgbm_time:.2f}s")
+    lgbm_available = True
+except ImportError:
+    print("\n⚠️ LightGBM not installed. Install with: pip install lightgbm")
+    lgbm_available = False
+
+# ─── Step 4: sklearn GradientBoosting baseline (from Project 23) ───
+from sklearn.ensemble import GradientBoostingClassifier
+
+sklearn_gb = GradientBoostingClassifier(
+    n_estimators=300, learning_rate=0.05, max_depth=6,
+    subsample=0.8, random_state=42
+)
+
+start = time.time()
+sklearn_gb.fit(X_train, y_train)
+sklearn_time = time.time() - start
+
+sklearn_pred = sklearn_gb.predict(X_test)
+sklearn_prob = sklearn_gb.predict_proba(X_test)[:, 1]
+sklearn_auc = roc_auc_score(y_test, sklearn_prob)
+sklearn_f1 = f1_score(y_test, sklearn_pred)
+
+print(f"\n=== sklearn GradientBoosting (baseline) ===")
+print(f"  AUC-ROC: {sklearn_auc:.4f}")
+print(f"  F1 Score: {sklearn_f1:.4f}")
+print(f"  Training time: {sklearn_time:.2f}s")
+
+# ─── Step 5: Head-to-head comparison plot ───
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+# AUC comparison
+models = ['sklearn GB']
+aucs = [sklearn_auc]
+times = [sklearn_time]
+f1s = [sklearn_f1]
+colors = ['#c9d1d9']
+
+if xgb_available:
+    models.append('XGBoost')
+    aucs.append(xgb_auc)
+    times.append(xgb_time)
+    f1s.append(xgb_f1)
+    colors.append('#58a6ff')
+if lgbm_available:
+    models.append('LightGBM')
+    aucs.append(lgbm_auc)
+    times.append(lgbm_time)
+    f1s.append(lgbm_f1)
+    colors.append('#3fb950')
+
+axes[0].barh(models, aucs, color=colors, edgecolor='white', alpha=0.8)
+axes[0].set_xlabel('AUC-ROC')
+axes[0].set_title('Model Accuracy (AUC-ROC)')
+axes[0].set_xlim(min(aucs) - 0.02, max(aucs) + 0.01)
+for i, v in enumerate(aucs):
+    axes[0].text(v + 0.001, i, f'{v:.4f}', va='center', color='white')
+
+# Training time comparison
+axes[1].barh(models, times, color=colors, edgecolor='white', alpha=0.8)
+axes[1].set_xlabel('Training Time (seconds)')
+axes[1].set_title('Training Speed')
+for i, v in enumerate(times):
+    axes[1].text(v + 0.1, i, f'{v:.2f}s', va='center', color='white')
+
+# Feature importance comparison
+if xgb_available and lgbm_available:
+    xgb_imp = xgb_model.feature_importances_
+    lgbm_imp = lgbm_model.feature_importances_
+    top_k = 15
+    top_xgb = np.argsort(xgb_imp)[::-1][:top_k]
+
+    x_pos = np.arange(top_k)
+    width = 0.35
+    axes[2].bar(x_pos - width/2, xgb_imp[top_xgb], width, label='XGBoost', color='#58a6ff', alpha=0.8)
+    axes[2].bar(x_pos + width/2, lgbm_imp[top_xgb], width, label='LightGBM', color='#3fb950', alpha=0.8)
+    axes[2].set_xlabel('Feature Index')
+    axes[2].set_ylabel('Importance')
+    axes[2].set_title('Top 15 Feature Importances')
+    axes[2].set_xticks(x_pos)
+    axes[2].set_xticklabels([f'F{i}' for i in top_xgb], rotation=45)
+    axes[2].legend()
+else:
+    axes[2].text(0.5, 0.5, 'Install both XGBoost\nand LightGBM\nfor comparison',
+                 ha='center', va='center', transform=axes[2].transAxes, color='white')
+
+plt.tight_layout()
+plt.savefig('project_31_xgb_vs_lgbm.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Comparison plot saved as project_31_xgb_vs_lgbm.png")
+
+# ─── Step 6: Summary table ───
+print(f"\n{'='*60}")
+print(f"{'Model':<20} {'AUC-ROC':<10} {'F1':<10} {'Time (s)':<10}")
+print(f"{'='*60}")
+print(f"{'sklearn GB':<20} {sklearn_auc:<10.4f} {sklearn_f1:<10.4f} {sklearn_time:<10.2f}")
+if xgb_available:
+    print(f"{'XGBoost':<20} {xgb_auc:<10.4f} {xgb_f1:<10.4f} {xgb_time:<10.2f}")
+if lgbm_available:
+    print(f"{'LightGBM':<20} {lgbm_auc:<10.4f} {lgbm_f1:<10.4f} {lgbm_time:<10.2f}")
+print(f"{'='*60}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>XGBoost and LightGBM are optimized gradient boosting implementations — same core idea from Project 23, different engineering</li>
+        <li>LightGBM's leaf-wise growth + GOSS + EFB make it faster on large datasets; XGBoost's regularization is more mature</li>
+        <li>Early stopping replaces manual n_estimators tuning — always use it</li>
+        <li>Fair benchmarks require identical splits, same metric, and equivalent tuning budgets</li>
+        <li>The "best" framework depends on your dataset, constraints, and deployment environment</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 32</h3>
+    <ul>
+        <li>We now have multiple strong models — XGBoost, LightGBM, Random Forest (Project 21), Logistic Regression</li>
+        <li>What if we could combine their predictions to beat any single model?</li>
+        <li>Project 32 introduces <strong>stacking</strong> — training a meta-learner on top of base model predictions</li>
+        <li>Instead of picking one winner, we let a second model learn which base model to trust for which inputs</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_30.html">← Project 30: Bayesian A/B Testing</a>
+    <a href="project_32.html">Project 32: Stacking Models →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

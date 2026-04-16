@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 18 — Sparse Feature Selection in Housing Data With Lasso</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 18: Sparse Feature Selection in Housing Data With Lasso</h1>
+<p>
+    <span class="tag">Lasso (L1)</span>
+    <span class="tag">Feature Selection</span>
+    <span class="tag">Sparsity</span>
+    <span class="tag">ElasticNet</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Project 17</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a data scientist at a real estate analytics firm predicting house prices</li>
+        <li>The dataset has 30 features: square footage, lot size, number of rooms, garage area, pool area, year built, neighborhood code, and 23 more</li>
+        <li>You suspect many features are irrelevant — pool area barely varies, some neighborhood codes have no signal</li>
+        <li>Ridge (Project 17) kept all 30 features — coefficients shrank but none went to zero</li>
+        <li>Goal → use Lasso to automatically identify which features actually matter and drop the rest</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 17: Ridge shrinks coefficients but keeps all features</li>
+        <li>Lasso uses L1 penalty: <code>Loss = MSE + α × Σ|wᵢ|</code> — absolute values instead of squares</li>
+        <li>The L1 penalty can push coefficients exactly to zero — automatic feature selection</li>
+        <li>Use LassoCV to find the best alpha, then inspect which coefficients survived</li>
+        <li>Compare with Ridge to see the difference in sparsity behavior</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate housing data with 30 features — some relevant, some noise</li>
+        <li>Fit Lasso and observe which coefficients become exactly zero</li>
+        <li>Plot coefficient paths as alpha increases — watch features drop out</li>
+        <li>Compare Lasso vs Ridge coefficient behavior side by side</li>
+        <li>Introduce ElasticNet as a hybrid of both penalties</li>
+        <li>Use LassoCV for automatic alpha selection with cross-validation</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Scale features before Lasso — same reason as Ridge (Project 17): penalty treats all coefficients equally</li>
+        <li>✅ Use LassoCV to automatically find the best alpha</li>
+        <li>✅ Inspect which coefficients are zero — those features are eliminated</li>
+        <li>✅ Compare the number of surviving features at different alpha values</li>
+        <li>✅ Consider ElasticNet when features are correlated AND you want sparsity</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use Lasso without scaling — same pitfall as Ridge (Project 17)</li>
+        <li>❌ Do NOT assume zero coefficient means the feature is truly useless — with correlated features, Lasso arbitrarily picks one and drops the other</li>
+        <li>❌ Do NOT set alpha too high — all coefficients go to zero (model predicts the mean)</li>
+        <li>❌ Do NOT use Lasso when you want to keep all correlated features — use Ridge instead</li>
+        <li>❌ Do NOT compare raw coefficient magnitudes between Lasso and Ridge — different penalties, different scales</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Lasso (L1)</strong> → when you suspect many features are irrelevant and want automatic selection</li>
+        <li>🔹 <strong>Ridge (L2)</strong> → when all features are potentially useful and correlated (Project 17)</li>
+        <li>🔹 <strong>ElasticNet</strong> → when you want sparsity (like Lasso) but also stability with correlated features (like Ridge)</li>
+        <li>🔹 <strong>LassoCV</strong> → automatic alpha selection via cross-validation</li>
+        <li>🔹 <strong>OLS</strong> → when you have few features with no multicollinearity (Project 9)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Lasso with highly correlated features — it randomly picks one and drops the rest (unstable selection)</li>
+        <li>🚫 When you need all features for interpretability — Lasso eliminates some</li>
+        <li>🚫 When the true model uses all features equally — Ridge is more appropriate</li>
+        <li>🚫 For nonlinear relationships — Lasso is still a linear model</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Lasso Loss Function</h3>
+    <ul>
+        <li><code>Loss = Σ(yᵢ - ŷᵢ)² + α × Σ|wⱼ|</code></li>
+        <li>First term: MSE (fit the data) — same as Ridge</li>
+        <li>Second term: L1 penalty (absolute values) — this is what creates sparsity</li>
+    </ul>
+
+    <h3>Why L1 Creates Zeros But L2 Doesn't</h3>
+    <ul>
+        <li>L2 penalty (Ridge): the gradient of w² is 2w — gets smaller as w approaches 0, never pushes to exactly 0</li>
+        <li>L1 penalty (Lasso): the gradient of |w| is ±1 — constant push toward 0 regardless of coefficient size</li>
+        <li>Geometrically: L1 constraint region is a diamond with corners on axes — optimal point often lands on a corner where some coefficients are exactly 0</li>
+        <li>L2 constraint region is a circle — optimal point rarely lands exactly on an axis</li>
+    </ul>
+
+    <h3>Coordinate Descent — How Lasso Is Solved</h3>
+    <ul>
+        <li>Unlike Ridge, Lasso has no closed-form solution (the absolute value is not differentiable at 0)</li>
+        <li>Solved via coordinate descent: optimize one coefficient at a time, cycling through all</li>
+        <li>For each coefficient, apply soft-thresholding: if the update is small enough, set it to exactly 0</li>
+    </ul>
+
+    <h3>ElasticNet — Best of Both</h3>
+    <ul>
+        <li><code>Loss = MSE + α × [ρ × Σ|wⱼ| + (1-ρ) × Σwⱼ²]</code></li>
+        <li>ρ (l1_ratio) controls the mix: ρ=1 is pure Lasso, ρ=0 is pure Ridge</li>
+        <li>ElasticNet handles correlated features better than Lasso — tends to keep groups of correlated features together</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Correlated feature instability</strong> — Lasso picks one from a correlated group arbitrarily; run it multiple times with different seeds to check stability</li>
+        <li>⚠️ <strong>Too aggressive alpha</strong> — all features eliminated, model predicts the mean</li>
+        <li>⚠️ <strong>Interpreting zero coefficients as "feature doesn't matter"</strong> — it might be correlated with a surviving feature</li>
+        <li>⚠️ <strong>Not scaling features</strong> — same issue as Ridge (Project 17)</li>
+        <li>⚠️ <strong>Using Lasso for prediction only</strong> — its real power is feature selection; if you only care about prediction, Ridge or ElasticNet may perform better</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Lasso via coordinate descent: efficient for sparse solutions — skips zero coefficients</li>
+        <li>Scales well to high-dimensional data (p >> n) — Lasso can handle more features than samples</li>
+        <li>LassoCV uses warm starts — each alpha starts from the previous solution, making the path efficient</li>
+        <li>For very large datasets, use SGD with L1 penalty (SGDRegressor with penalty='l1')</li>
+        <li>ElasticNet is slightly more expensive than pure Lasso but still efficient</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Lasso produces sparse models — easier to explain ("only these 8 out of 30 features matter")</li>
+        <li>✅ Non-zero coefficients indicate feature importance (with caveats about correlation)</li>
+        <li>⚠️ Zero coefficient ≠ "feature is useless" — it might be redundant with a surviving feature</li>
+        <li>⚠️ Surviving coefficients are biased (shrunk) — they underestimate the true effect</li>
+        <li>⚠️ Feature selection depends on alpha — different alphas give different selected features</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.linear_model import Lasso, LassoCV, Ridge, ElasticNet, ElasticNetCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import cross_val_score, KFold
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic housing data — 30 features, only ~8 relevant ───
+np.random.seed(42)
+n = 400
+p_total = 30
+p_relevant = 8
+
+X = np.random.randn(n, p_total)
+# Make some features correlated
+X[:, 1] = X[:, 0] * 0.9 + np.random.normal(0, 0.3, n)  # correlated with feature 0
+X[:, 3] = X[:, 2] * 0.85 + np.random.normal(0, 0.4, n)  # correlated with feature 2
+
+# True coefficients: only first 8 features matter
+true_coefs = np.zeros(p_total)
+true_coefs[:p_relevant] = [15, -8, 12, -5, 10, 7, -6, 4]
+
+y = X @ true_coefs + np.random.normal(0, 10, n)
+feature_names = [f'feat_{i}' for i in range(p_total)]
+
+# ─── Step 2: Scale features ───
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# ─── Step 3: Lasso — watch coefficients go to zero ───
+print("=== Lasso vs Ridge: Coefficient Comparison ===")
+lasso = Lasso(alpha=1.0).fit(X_scaled, y)
+ridge = Ridge(alpha=1.0).fit(X_scaled, y)
+
+nonzero_lasso = np.sum(lasso.coef_ != 0)
+print(f"\nLasso (α=1.0): {nonzero_lasso}/{p_total} features kept")
+print(f"Ridge (α=1.0): {np.sum(ridge.coef_ != 0)}/{p_total} features kept (Ridge keeps all)")
+
+print(f"\n{'Feature':>10} {'True':>8} {'Lasso':>8} {'Ridge':>8}")
+print("-" * 40)
+for i in range(p_total):
+    marker = " ← zero" if lasso.coef_[i] == 0 else ""
+    print(f"{feature_names[i]:>10} {true_coefs[i]:>8.1f} {lasso.coef_[i]:>8.3f} "
+          f"{ridge.coef_[i]:>8.3f}{marker}")
+
+# ─── Step 4: LassoCV — automatic alpha selection ───
+alphas = np.logspace(-3, 2, 100)
+lasso_cv = LassoCV(alphas=alphas, cv=5, random_state=42)
+lasso_cv.fit(X_scaled, y)
+
+print(f"\n=== LassoCV Results ===")
+print(f"  Best alpha: {lasso_cv.alpha_:.4f}")
+print(f"  Non-zero coefficients: {np.sum(lasso_cv.coef_ != 0)}/{p_total}")
+print(f"  R² score: {lasso_cv.score(X_scaled, y):.4f}")
+
+selected = [feature_names[i] for i in range(p_total) if lasso_cv.coef_[i] != 0]
+print(f"  Selected features: {selected}")
+
+# ─── Step 5: ElasticNet — hybrid L1 + L2 ───
+enet_cv = ElasticNetCV(l1_ratio=[0.1, 0.5, 0.7, 0.9, 0.95, 1.0],
+                        alphas=alphas, cv=5, random_state=42)
+enet_cv.fit(X_scaled, y)
+
+print(f"\n=== ElasticNetCV Results ===")
+print(f"  Best alpha: {enet_cv.alpha_:.4f}")
+print(f"  Best l1_ratio: {enet_cv.l1_ratio_:.2f}")
+print(f"  Non-zero coefficients: {np.sum(enet_cv.coef_ != 0)}/{p_total}")
+print(f"  R² score: {enet_cv.score(X_scaled, y):.4f}")
+
+# ─── Step 6: Cross-validated comparison ───
+print(f"\n=== CV Comparison: OLS vs Ridge vs Lasso vs ElasticNet ===")
+cv = KFold(n_splits=5, shuffle=True, random_state=42)
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+
+models = [
+    ('OLS', Pipeline([('s', StandardScaler()), ('m', LinearRegression())])),
+    ('Ridge', Pipeline([('s', StandardScaler()), ('m', Ridge(alpha=1.0))])),
+    ('Lasso', Pipeline([('s', StandardScaler()), ('m', Lasso(alpha=lasso_cv.alpha_))])),
+    ('ElasticNet', Pipeline([('s', StandardScaler()),
+                              ('m', ElasticNet(alpha=enet_cv.alpha_,
+                                               l1_ratio=enet_cv.l1_ratio_))])),
+]
+for name, model in models:
+    scores = cross_val_score(model, X, y, cv=cv, scoring='neg_root_mean_squared_error')
+    print(f"  {name:>12}: RMSE = {-scores.mean():.2f} ± {scores.std():.2f}")
+
+# ─── Step 7: Coefficient path plot — Lasso vs Ridge ───
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Lasso path
+alphas_path = np.logspace(-3, 2, 100)
+lasso_paths = []
+for a in alphas_path:
+    m = Lasso(alpha=a, max_iter=10000).fit(X_scaled, y)
+    lasso_paths.append(m.coef_)
+lasso_paths = np.array(lasso_paths)
+
+for i in range(p_total):
+    color = '#3fb950' if i < p_relevant else '#30363d'
+    alpha_line = 0.9 if i < p_relevant else 0.3
+    axes[0].plot(alphas_path, lasso_paths[:, i], color=color, alpha=alpha_line,
+                 label=feature_names[i] if i < p_relevant else None)
+axes[0].set_xscale('log')
+axes[0].axvline(x=lasso_cv.alpha_, color='#f85149', linestyle='--', label=f'Best α={lasso_cv.alpha_:.3f}')
+axes[0].set_xlabel('Alpha')
+axes[0].set_ylabel('Coefficient value')
+axes[0].set_title('Lasso Coefficient Paths (L1)')
+axes[0].legend(fontsize=7, loc='upper right')
+axes[0].grid(True, alpha=0.2)
+
+# Ridge path for comparison
+ridge_paths = []
+for a in alphas_path:
+    m = Ridge(alpha=a).fit(X_scaled, y)
+    ridge_paths.append(m.coef_)
+ridge_paths = np.array(ridge_paths)
+
+for i in range(p_total):
+    color = '#3fb950' if i < p_relevant else '#30363d'
+    alpha_line = 0.9 if i < p_relevant else 0.3
+    axes[1].plot(alphas_path, ridge_paths[:, i], color=color, alpha=alpha_line)
+axes[1].set_xscale('log')
+axes[1].set_xlabel('Alpha')
+axes[1].set_ylabel('Coefficient value')
+axes[1].set_title('Ridge Coefficient Paths (L2) — No Zeros')
+axes[1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_18_lasso_vs_ridge_paths.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Coefficient paths saved as project_18_lasso_vs_ridge_paths.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Lasso (L1) pushes coefficients to exactly zero — automatic feature selection</li>
+        <li>Ridge (L2) shrinks but never eliminates — keeps all features (Project 17)</li>
+        <li>ElasticNet combines both: sparsity from L1 + stability from L2</li>
+        <li>With correlated features, Lasso arbitrarily picks one — ElasticNet is more stable</li>
+        <li>LassoCV finds the best alpha automatically via cross-validation</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 19</h3>
+    <ul>
+        <li>So far all our classification problems had roughly balanced classes</li>
+        <li>Project 19 tackles a real-world nightmare: <strong>class imbalance</strong> — 99% legitimate transactions, 1% fraud</li>
+        <li>Accuracy becomes meaningless — a model that always says "not fraud" gets 99% accuracy</li>
+        <li>We'll learn SMOTE, class_weight, and why precision-recall matters more than accuracy</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_17.html">← Project 17: Ridge Regression</a>
+    <a href="project_19.html">Project 19: Detecting Fraud — Class Imbalance →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

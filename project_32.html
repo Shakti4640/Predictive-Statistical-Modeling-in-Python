@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 32 — Stacking Models to Beat Any Single Learner</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 32: Stacking Models to Beat Any Single Learner</h1>
+<p>
+    <span class="tag">Stacking</span>
+    <span class="tag">Meta-Learner</span>
+    <span class="tag">StackingClassifier</span>
+    <span class="tag">Blending</span>
+    <span class="tag">Out-of-Fold</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 21, 23, 31</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're competing in a machine learning competition to predict hospital readmission risk</li>
+        <li>You've trained Logistic Regression, Random Forest (Project 21), GradientBoosting (Project 23), and XGBoost (Project 31)</li>
+        <li>Each model scores ~0.85 AUC individually — but they make different mistakes on different patients</li>
+        <li>Simple averaging of predictions gives 0.86 — a small boost, but you want more</li>
+        <li>Goal → build a stacking ensemble that learns which model to trust for which type of patient</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 21: Random Forest reduces variance by averaging independent trees (bagging)</li>
+        <li>Stacking goes further — it trains a second-level model (meta-learner) on the predictions of diverse base models</li>
+        <li>The meta-learner learns the strengths and weaknesses of each base model</li>
+        <li>Critical: base model predictions for the meta-learner must be out-of-fold to prevent leakage</li>
+        <li>Use sklearn's StackingClassifier for a clean implementation, then build it manually to understand the mechanics</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Train diverse base models — diversity is key (different algorithms, not just different hyperparameters)</li>
+        <li>Generate out-of-fold predictions using cross-validation</li>
+        <li>Train a meta-learner (logistic regression) on the out-of-fold predictions</li>
+        <li>Compare: individual models vs simple average vs stacking</li>
+        <li>Implement both sklearn StackingClassifier and manual stacking to understand the difference</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use diverse base models — a stack of 5 similar models won't help; mix linear, tree-based, and distance-based</li>
+        <li>✅ Use out-of-fold predictions for the meta-learner — this prevents the meta-learner from memorizing training data</li>
+        <li>✅ Keep the meta-learner simple — logistic regression or ridge; a complex meta-learner overfits</li>
+        <li>✅ Pass probabilities (not hard predictions) to the meta-learner — more information for it to learn from</li>
+        <li>✅ Use <code>cv=5</code> or more in StackingClassifier for reliable out-of-fold predictions</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT train the meta-learner on the same predictions the base models were trained on — massive data leakage</li>
+        <li>❌ Do NOT stack 5 copies of the same algorithm with different seeds — no diversity, no benefit</li>
+        <li>❌ Do NOT use a complex meta-learner (deep GBM) — it will overfit to the base model predictions</li>
+        <li>❌ Do NOT expect stacking to always win — on small datasets, the overhead isn't worth it</li>
+        <li>❌ Do NOT ignore the computational cost — stacking multiplies training time by (n_base_models × n_cv_folds)</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Stacking</strong> → when you have diverse models and need maximum predictive performance (competitions, high-stakes)</li>
+        <li>🔹 <strong>Simple averaging/voting</strong> → when you want ensemble benefits without the complexity of a meta-learner</li>
+        <li>🔹 <strong>Blending</strong> → simpler than stacking; uses a single holdout set instead of cross-validation for meta-features</li>
+        <li>🔹 <strong>Single best model</strong> → when interpretability or deployment simplicity matters more than marginal accuracy</li>
+        <li>🔹 <strong>Bagging (Project 21)</strong> → when you want to reduce variance of a single algorithm, not combine different ones</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When your dataset is small (&lt;5,000 rows) — out-of-fold predictions become noisy</li>
+        <li>🚫 When deployment latency matters — stacking requires running all base models at inference time</li>
+        <li>🚫 When a single well-tuned model (Project 22) already meets your performance target</li>
+        <li>🚫 When you need to explain predictions — "the meta-learner weighted model A at 0.6 and model B at 0.4" is hard to justify</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Stacking Architecture</h3>
+    <ul>
+        <li>Level 0 (base models): diverse classifiers trained on the original features</li>
+        <li>Level 1 (meta-learner): a simple model trained on the base models' out-of-fold predictions</li>
+        <li>At inference: all base models predict → their predictions become features → meta-learner makes final prediction</li>
+        <li>The meta-learner learns: "When model A says 0.8 and model B says 0.3, the true answer is usually positive"</li>
+    </ul>
+
+    <h3>Out-of-Fold Predictions — Why They Matter</h3>
+    <ul>
+        <li>If base models predict on their own training data, predictions are overconfident (they've seen the answers)</li>
+        <li>Out-of-fold: split training data into K folds, train on K-1, predict on the held-out fold</li>
+        <li>Each training sample gets a prediction from a model that never saw it — honest predictions</li>
+        <li>This is the same cross-validation logic from Project 15, applied to generate meta-features</li>
+    </ul>
+
+    <h3>Blending vs Stacking</h3>
+    <ul>
+        <li>Blending: split training data into train (80%) and blend (20%); train base models on train, predict on blend</li>
+        <li>Meta-learner trains on blend set predictions only — simpler but wastes 20% of data</li>
+        <li>Stacking: uses full cross-validation — every sample gets an out-of-fold prediction, no data wasted</li>
+        <li>Stacking is more robust but slower; blending is faster but noisier on small datasets</li>
+    </ul>
+
+    <h3>Why Diversity Matters</h3>
+    <ul>
+        <li>If all base models make the same errors, the meta-learner can't learn anything new</li>
+        <li>Ideal: models that are individually strong but make errors on different subsets of data</li>
+        <li>Mix algorithm families: linear (LogReg), tree-based (RF, XGBoost), distance-based (KNN), probabilistic (NaiveBayes)</li>
+        <li>Correlation between base model predictions should be moderate — too high means redundancy</li>
+    </ul>
+
+    <h3>StackingClassifier Internals</h3>
+    <ul>
+        <li>sklearn's StackingClassifier automates the out-of-fold prediction generation</li>
+        <li><code>stack_method='predict_proba'</code> passes probabilities; <code>'predict'</code> passes hard labels</li>
+        <li><code>passthrough=True</code> also passes original features to the meta-learner (sometimes helps)</li>
+        <li>The final estimator (meta-learner) is fit on the concatenated out-of-fold predictions</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Data leakage in meta-features</strong> — using in-sample predictions instead of out-of-fold inflates performance dramatically</li>
+        <li>⚠️ <strong>Lack of diversity</strong> — stacking RF + ExtraTrees + GBM (all tree-based) gives minimal lift over a single GBM</li>
+        <li>⚠️ <strong>Overfitting the meta-learner</strong> — using GBM as meta-learner on 5 base model probabilities (10 features) overfits easily</li>
+        <li>⚠️ <strong>Too many stacking levels</strong> — 2 levels is standard; 3+ levels rarely help and increase overfitting risk</li>
+        <li>⚠️ <strong>Ignoring training cost</strong> — a 5-model stack with 5-fold CV trains 25 models; budget accordingly</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Training cost: n_base_models × n_cv_folds × single_model_cost + meta-learner cost</li>
+        <li>Inference cost: all base models must predict at serving time — latency = sum of all base model latencies</li>
+        <li>For production, consider distilling the stack into a single model that mimics its predictions</li>
+        <li>Blending is faster than stacking (no cross-validation loop) — use it when training time is constrained</li>
+        <li>Parallelization: base models in each fold can be trained independently — embarrassingly parallel</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Meta-learner coefficients show which base model the stack trusts most</li>
+        <li>✅ If meta-learner is logistic regression, you can see: "XGBoost gets weight 0.45, LogReg gets 0.30, RF gets 0.25"</li>
+        <li>⚠️ Explaining individual predictions is hard — you'd need SHAP on the meta-learner AND each base model</li>
+        <li>⚠️ Stakeholders may not accept "a model of models" — simpler ensembles (voting) are easier to justify</li>
+        <li>⚠️ In regulated industries, stacking may not pass model governance review</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, cross_val_predict
+from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.ensemble import (RandomForestClassifier, GradientBoostingClassifier,
+                               StackingClassifier, VotingClassifier)
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import roc_auc_score, f1_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Dataset ───
+np.random.seed(42)
+X, y = make_classification(n_samples=5000, n_features=20,
+                           n_informative=12, n_redundant=4,
+                           flip_y=0.05, weights=[0.6, 0.4],
+                           random_state=42)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42)
+
+print(f"=== Dataset ===")
+print(f"  Train: {X_train.shape[0]}, Test: {X_test.shape[0]}, Features: {X.shape[1]}")
+
+# ─── Step 2: Define diverse base models ───
+base_models = [
+    ('lr', Pipeline([('scaler', StandardScaler()),
+                     ('clf', LogisticRegression(max_iter=1000, random_state=42))])),
+    ('rf', RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)),
+    ('gb', GradientBoostingClassifier(n_estimators=200, max_depth=5,
+                                       learning_rate=0.1, random_state=42)),
+    ('knn', Pipeline([('scaler', StandardScaler()),
+                      ('clf', KNeighborsClassifier(n_neighbors=15))])),
+    ('svc', Pipeline([('scaler', StandardScaler()),
+                      ('clf', SVC(probability=True, kernel='rbf', random_state=42))])),
+]
+
+# ─── Step 3: Individual model performance ───
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+print(f"\n=== Individual Model Performance (5-Fold CV) ===")
+individual_scores = {}
+
+for name, model in base_models:
+    scores = cross_val_score(model, X_train, y_train, cv=cv, scoring='roc_auc')
+    individual_scores[name] = scores.mean()
+    print(f"  {name:>5}: AUC = {scores.mean():.4f} ± {scores.std():.4f}")
+
+# ─── Step 4: Simple voting ensemble ───
+voting_clf = VotingClassifier(
+    estimators=base_models, voting='soft', n_jobs=-1)
+voting_scores = cross_val_score(voting_clf, X_train, y_train, cv=cv, scoring='roc_auc')
+print(f"\n=== Soft Voting Ensemble ===")
+print(f"  AUC = {voting_scores.mean():.4f} ± {voting_scores.std():.4f}")
+
+# ─── Step 5: Stacking with sklearn StackingClassifier ───
+stacking_clf = StackingClassifier(
+    estimators=base_models,
+    final_estimator=LogisticRegression(max_iter=1000, random_state=42),
+    cv=5,
+    stack_method='predict_proba',
+    passthrough=False,
+    n_jobs=-1
+)
+
+stacking_scores = cross_val_score(stacking_clf, X_train, y_train, cv=cv, scoring='roc_auc')
+print(f"\n=== Stacking Ensemble (LogReg meta-learner) ===")
+print(f"  AUC = {stacking_scores.mean():.4f} ± {stacking_scores.std():.4f}")
+
+# ─── Step 6: Stacking with passthrough (original features + meta-features) ───
+stacking_pt = StackingClassifier(
+    estimators=base_models,
+    final_estimator=LogisticRegression(max_iter=1000, random_state=42),
+    cv=5,
+    stack_method='predict_proba',
+    passthrough=True,
+    n_jobs=-1
+)
+
+stacking_pt_scores = cross_val_score(stacking_pt, X_train, y_train, cv=cv, scoring='roc_auc')
+print(f"\n=== Stacking + Passthrough ===")
+print(f"  AUC = {stacking_pt_scores.mean():.4f} ± {stacking_pt_scores.std():.4f}")
+
+# ─── Step 7: Manual stacking to understand the mechanics ───
+print(f"\n=== Manual Stacking (step by step) ===")
+
+# Generate out-of-fold predictions
+oof_predictions = np.zeros((X_train.shape[0], len(base_models)))
+test_predictions = np.zeros((X_test.shape[0], len(base_models)))
+
+for i, (name, model) in enumerate(base_models):
+    # Out-of-fold predictions for training set
+    oof_pred = cross_val_predict(model, X_train, y_train, cv=cv, method='predict_proba')[:, 1]
+    oof_predictions[:, i] = oof_pred
+
+    # Fit on full training set and predict test
+    model.fit(X_train, y_train)
+    test_predictions[:, i] = model.predict_proba(X_test)[:, 1]
+    print(f"  {name}: OOF AUC = {roc_auc_score(y_train, oof_pred):.4f}")
+
+# Train meta-learner on out-of-fold predictions
+meta_learner = LogisticRegression(max_iter=1000, random_state=42)
+meta_learner.fit(oof_predictions, y_train)
+
+# Final prediction
+manual_stack_prob = meta_learner.predict_proba(test_predictions)[:, 1]
+manual_stack_auc = roc_auc_score(y_test, manual_stack_prob)
+print(f"\n  Manual Stack Test AUC: {manual_stack_auc:.4f}")
+
+# Meta-learner coefficients — which model does it trust?
+print(f"\n  Meta-learner coefficients (model trust weights):")
+for (name, _), coef in zip(base_models, meta_learner.coef_[0]):
+    print(f"    {name:>5}: {coef:+.3f}")
+
+# ─── Step 8: Visualization ───
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+# Compare all approaches
+all_names = list(individual_scores.keys()) + ['Voting', 'Stack', 'Stack+PT']
+all_scores = list(individual_scores.values()) + [
+    voting_scores.mean(), stacking_scores.mean(), stacking_pt_scores.mean()]
+colors = ['#c9d1d9'] * len(individual_scores) + ['#f0883e', '#3fb950', '#58a6ff']
+
+axes[0].barh(all_names, all_scores, color=colors, edgecolor='white', alpha=0.8)
+axes[0].set_xlabel('AUC-ROC')
+axes[0].set_title('Individual vs Ensemble Performance')
+axes[0].set_xlim(min(all_scores) - 0.02, max(all_scores) + 0.01)
+for i, v in enumerate(all_scores):
+    axes[0].text(v + 0.001, i, f'{v:.4f}', va='center', color='white', fontsize=9)
+
+# Meta-learner weights
+coefs = meta_learner.coef_[0]
+names = [n for n, _ in base_models]
+bar_colors = ['#3fb950' if c > 0 else '#f85149' for c in coefs]
+axes[1].barh(names, coefs, color=bar_colors, edgecolor='white', alpha=0.8)
+axes[1].set_xlabel('Meta-Learner Coefficient')
+axes[1].set_title('Which Model Does the Stack Trust?')
+axes[1].axvline(x=0, color='white', linewidth=0.5)
+
+# Correlation between base model predictions
+corr_matrix = np.corrcoef(oof_predictions.T)
+im = axes[2].imshow(corr_matrix, cmap='coolwarm', vmin=0.5, vmax=1.0)
+axes[2].set_xticks(range(len(names)))
+axes[2].set_yticks(range(len(names)))
+axes[2].set_xticklabels(names)
+axes[2].set_yticklabels(names)
+axes[2].set_title('Base Model Prediction Correlation')
+for i in range(len(names)):
+    for j in range(len(names)):
+        axes[2].text(j, i, f'{corr_matrix[i,j]:.2f}', ha='center', va='center',
+                     color='white' if corr_matrix[i,j] < 0.8 else 'black', fontsize=9)
+plt.colorbar(im, ax=axes[2])
+
+plt.tight_layout()
+plt.savefig('project_32_stacking.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Stacking analysis saved as project_32_stacking.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Stacking trains a meta-learner on out-of-fold predictions from diverse base models</li>
+        <li>Diversity is the key ingredient — mix algorithm families, not just hyperparameters</li>
+        <li>Out-of-fold predictions prevent the meta-learner from memorizing — same logic as cross-validation (Project 15)</li>
+        <li>Keep the meta-learner simple (logistic regression) — it only has n_base_models features to work with</li>
+        <li>Stacking shines in competitions but adds complexity; in production, a single well-tuned model (Project 31) is often sufficient</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 33</h3>
+    <ul>
+        <li>Our stacking ensemble outputs probabilities — but can we trust them?</li>
+        <li>When a model says "80% chance of readmission," is it really 80%?</li>
+        <li>Project 33 introduces <strong>probability calibration</strong> — making model confidence match reality</li>
+        <li>We'll learn Platt scaling, isotonic regression, and reliability diagrams to diagnose and fix miscalibrated probabilities</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_31.html">← Project 31: XGBoost vs LightGBM</a>
+    <a href="project_33.html">Project 33: Probability Calibration →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

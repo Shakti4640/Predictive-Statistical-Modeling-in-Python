@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 59 — End-to-End ML System — Churn Prediction With Feature Store + Monitoring</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 59: End-to-End ML System — Churn Prediction With Feature Store + Monitoring</h1>
+<p>
+    <span class="tag">Feature Store</span>
+    <span class="tag">Training/Serving Skew</span>
+    <span class="tag">Model Registry</span>
+    <span class="tag">ML System Design</span>
+    <span class="tag">Feast/MLflow</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 55, 56, 42, 23</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A telecom company has a churn prediction model in production (Project 55) with drift monitoring (Project 56)</li>
+        <li>But the system is fragile: features are computed differently in training notebooks vs the serving API</li>
+        <li>The data scientist computes "avg_monthly_charges_last_6m" one way; the backend engineer computes it differently</li>
+        <li>Result: training/serving skew — the model sees different feature values in production than it was trained on</li>
+        <li>There's no model versioning — nobody knows which model is in production or what data it was trained on</li>
+        <li>Goal → build a complete ML system with a feature store (single source of truth), model registry, and automated retraining pipeline</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 55: we built a REST API — but feature computation was embedded in the notebook</li>
+        <li>From Project 56: we detect drift — but retraining is manual and error-prone</li>
+        <li>From Project 42: AutoML finds the best model — but there's no registry to track experiments</li>
+        <li>From Project 23: gradient boosting predicts churn — but the feature pipeline isn't reproducible</li>
+        <li>The solution is a layered architecture: Feature Store → Training Pipeline → Model Registry → Serving → Monitoring → Retraining Loop</li>
+        <li>Each layer has a single responsibility and a clear interface to the next</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Design a feature store that computes and stores features consistently for both training and serving</li>
+        <li>Build a training pipeline that reads from the feature store and logs experiments to a model registry</li>
+        <li>Implement model versioning with metadata (training data hash, hyperparameters, metrics)</li>
+        <li>Create a serving layer that reads features from the same store the model was trained on</li>
+        <li>Add monitoring that detects drift and triggers automated retraining</li>
+        <li>Simulate the full lifecycle: train → deploy → monitor → detect drift → retrain → redeploy</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use a feature store as the single source of truth — same feature computation for training and serving</li>
+        <li>✅ Version everything: data, features, models, and code — reproducibility is non-negotiable</li>
+        <li>✅ Log all experiments with hyperparameters, metrics, and data lineage</li>
+        <li>✅ Automate the retraining pipeline — drift detection should trigger retraining without human intervention</li>
+        <li>✅ Use shadow deployment — run the new model alongside the old one before switching</li>
+        <li>✅ Track training/serving skew metrics — compare feature distributions between training data and live requests</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT compute features differently in training and serving — this is the #1 production ML bug</li>
+        <li>❌ Do NOT deploy a model without knowing what data it was trained on — data lineage is essential</li>
+        <li>❌ Do NOT skip A/B testing when deploying a new model — the new model might be worse on real traffic</li>
+        <li>❌ Do NOT retrain automatically without validation gates — a bad retrain can crash production</li>
+        <li>❌ Do NOT store models without metadata — "model_v2_final_FINAL.pkl" is not a versioning strategy</li>
+        <li>❌ Do NOT ignore the feedback loop — predictions influence user behavior, which changes future data</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Feast</strong> → open-source feature store; good for offline/online feature serving with point-in-time joins</li>
+        <li>🔹 <strong>MLflow</strong> → experiment tracking + model registry; lightweight, Python-native</li>
+        <li>🔹 <strong>Custom feature store</strong> → when Feast is overkill; a well-designed SQL/Parquet pipeline works for small teams</li>
+        <li>🔹 <strong>Airflow/Prefect</strong> → for orchestrating the training pipeline on a schedule or trigger</li>
+        <li>🔹 <strong>Shadow deployment</strong> → when you need to validate a new model on live traffic without risk</li>
+        <li>🔹 <strong>Canary deployment</strong> → gradually shift traffic from old to new model (5% → 25% → 100%)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you have one model updated quarterly — a full ML system is overkill; a notebook + cron job suffices</li>
+        <li>🚫 When the team is 1-2 people — the operational overhead of Feast + MLflow + Airflow exceeds the benefit</li>
+        <li>🚫 When features don't change — if the feature set is static, a feature store adds unnecessary complexity</li>
+        <li>🚫 When there's no production serving — if the model runs in batch only, skip the online feature store</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Feature Store Architecture</h3>
+    <ul>
+        <li>Offline store: historical features for training — typically Parquet files or a data warehouse</li>
+        <li>Online store: low-latency features for serving — typically Redis or DynamoDB</li>
+        <li>Feature definitions: code that computes features from raw data — the single source of truth</li>
+        <li>Point-in-time joins: when training, join features as they existed AT the time of each label — prevents data leakage</li>
+        <li>Feast materializes features from offline to online store on a schedule</li>
+    </ul>
+
+    <h3>Training/Serving Skew</h3>
+    <ul>
+        <li>Skew occurs when the feature computation differs between training and serving</li>
+        <li>Example: training computes "avg_charges" as mean of last 6 months; serving computes mean of last 3 months</li>
+        <li>The model learned patterns from 6-month averages but sees 3-month averages in production — predictions are wrong</li>
+        <li>Solution: the feature store ensures IDENTICAL computation in both contexts</li>
+        <li>Detection: compare feature distributions between training data and live serving logs (Project 56)</li>
+    </ul>
+
+    <h3>Model Registry</h3>
+    <ul>
+        <li>Stores model artifacts with metadata: version, training data hash, hyperparameters, metrics</li>
+        <li>Model lifecycle stages: "staging" → "production" → "archived"</li>
+        <li>Only one model is "production" at a time — clear ownership and rollback capability</li>
+        <li>MLflow provides this out of the box with a REST API and UI</li>
+    </ul>
+
+    <h3>The Retraining Loop</h3>
+    <ul>
+        <li>Monitor → Detect drift (Project 56) → Trigger retraining pipeline</li>
+        <li>Pipeline: fetch latest features from store → train new model → evaluate on holdout</li>
+        <li>Validation gate: new model must beat current production model by a margin (e.g., +0.5% AUC)</li>
+        <li>If passes: register as "staging" → shadow deploy → promote to "production"</li>
+        <li>If fails: alert the team — drift might require feature engineering, not just retraining</li>
+    </ul>
+
+    <h3>System Architecture Diagram</h3>
+    <ul>
+        <li>Raw Data → Feature Engineering Code → Feature Store (offline + online)</li>
+        <li>Feature Store (offline) → Training Pipeline → Model → Model Registry</li>
+        <li>API Request → Feature Store (online) → Model (from Registry) → Prediction → Logging</li>
+        <li>Logging → Monitoring (PSI/KS) → Drift Alert → Retraining Trigger → back to Training Pipeline</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Training/serving skew</strong> — the #1 ML production bug; feature stores prevent it but only if used consistently</li>
+        <li>⚠️ <strong>Data leakage in time-based features</strong> — using future data to compute historical features; point-in-time joins prevent this</li>
+        <li>⚠️ <strong>Retraining on bad data</strong> — if the data pipeline breaks, retraining on garbage data deploys a garbage model</li>
+        <li>⚠️ <strong>No validation gate</strong> — automatically deploying every retrained model without checking if it's actually better</li>
+        <li>⚠️ <strong>Feedback loops</strong> — the model's predictions change user behavior, which changes the training data distribution</li>
+        <li>⚠️ <strong>Over-engineering</strong> — building a full ML platform for one model that updates monthly; start simple, add complexity as needed</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Feature store online latency: Redis serves features in &lt; 1ms; critical for real-time serving</li>
+        <li>Offline feature computation: batch jobs on Spark/Dask for large datasets; schedule with Airflow</li>
+        <li>Model registry: MLflow handles thousands of experiments; scales with a PostgreSQL backend</li>
+        <li>Retraining frequency: daily for fast-changing domains (fraud), monthly for stable domains (credit scoring)</li>
+        <li>For multiple models: shared feature store avoids redundant computation across teams</li>
+        <li>Start with a simple architecture; add components (Feast, MLflow, Airflow) only when the pain justifies the complexity</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Feature store provides data lineage — "this prediction used features computed from data as of 2024-01-15"</li>
+        <li>✅ Model registry tracks which model made each prediction — essential for audit trails</li>
+        <li>✅ SHAP values (Project 27) can be computed and logged alongside predictions for explainability</li>
+        <li>⚠️ System complexity makes debugging harder — "why did the model predict X?" requires tracing through multiple components</li>
+        <li>⚠️ Automated retraining can change model behavior without human review — add approval gates for regulated domains</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+import joblib
+import json
+import hashlib
+from datetime import datetime, timedelta
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score, classification_report
+from scipy import stats
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 1: FEATURE STORE (Simplified Simulation)
+# ═══════════════════════════════════════════════════════════════
+print("=" * 60)
+print("COMPONENT 1: FEATURE STORE")
+print("=" * 60)
+
+class SimpleFeatureStore:
+    """Simulates a feature store — single source of truth for features."""
+
+    def __init__(self):
+        self.feature_definitions = {}
+        self.offline_store = {}  # historical features
+        self.online_store = {}   # latest features per entity
+        self.metadata = {}
+
+    def register_feature(self, name, compute_fn, description):
+        self.feature_definitions[name] = {
+            'compute_fn': compute_fn, 'description': description,
+            'registered_at': datetime.now().isoformat()
+        }
+        print(f"  Registered feature: {name} — {description}")
+
+    def materialize(self, raw_data, entity_col='customer_id', timestamp_col='event_date'):
+        """Compute all features from raw data (offline materialization)."""
+        features = raw_data[[entity_col, timestamp_col]].copy()
+        for name, defn in self.feature_definitions.items():
+            features[name] = defn['compute_fn'](raw_data)
+
+        # Store in offline store (for training)
+        data_hash = hashlib.md5(features.to_csv().encode()).hexdigest()[:8]
+        self.offline_store[data_hash] = features
+        self.metadata[data_hash] = {
+            'rows': len(features), 'features': list(self.feature_definitions.keys()),
+            'materialized_at': datetime.now().isoformat()
+        }
+
+        # Update online store (latest per entity)
+        latest = features.sort_values(timestamp_col).groupby(entity_col).last()
+        for entity_id, row in latest.iterrows():
+            self.online_store[entity_id] = row.to_dict()
+
+        print(f"  Materialized {len(features)} rows, {len(self.feature_definitions)} features")
+        print(f"  Data hash: {data_hash}")
+        return features, data_hash
+
+    def get_training_data(self, data_hash):
+        """Retrieve features for training (offline)."""
+        return self.offline_store[data_hash]
+
+    def get_online_features(self, entity_id):
+        """Retrieve features for serving (online) — same computation as training."""
+        return self.online_store.get(entity_id, None)
+
+# Generate raw customer data
+n_customers = 5000
+raw_data = pd.DataFrame({
+    'customer_id': range(n_customers),
+    'event_date': pd.date_range('2024-01-01', periods=n_customers, freq='h'),
+    'tenure_months': np.random.randint(1, 72, n_customers),
+    'monthly_charges': np.random.uniform(20, 120, n_customers),
+    'total_charges': np.random.uniform(100, 8000, n_customers),
+    'support_tickets': np.random.poisson(2, n_customers),
+    'contract_type': np.random.choice([0, 1, 2], n_customers, p=[0.5, 0.3, 0.2]),
+    'has_partner': np.random.binomial(1, 0.4, n_customers),
+})
+
+# Add churn labels
+log_odds = (-1.5 - 0.03 * raw_data.tenure_months + 0.02 * raw_data.monthly_charges
+            - 0.0003 * raw_data.total_charges + 0.3 * raw_data.support_tickets
+            - 0.5 * raw_data.contract_type)
+raw_data['churn'] = (np.random.random(n_customers) &lt; 1/(1+np.exp(-log_odds))).astype(int)
+
+# Initialize feature store and register features
+fs = SimpleFeatureStore()
+fs.register_feature('tenure_months', lambda df: df['tenure_months'], 'Months as customer')
+fs.register_feature('monthly_charges', lambda df: df['monthly_charges'], 'Monthly bill amount')
+fs.register_feature('total_charges', lambda df: df['total_charges'], 'Lifetime charges')
+fs.register_feature('support_tickets', lambda df: df['support_tickets'], 'Number of support tickets')
+fs.register_feature('contract_type', lambda df: df['contract_type'], 'Contract type (0/1/2)')
+fs.register_feature('has_partner', lambda df: df['has_partner'], 'Has partner (0/1)')
+fs.register_feature('charge_per_month', lambda df: df['total_charges'] / (df['tenure_months'] + 1),
+                     'Average charge per tenure month')
+fs.register_feature('ticket_rate', lambda df: df['support_tickets'] / (df['tenure_months'] + 1),
+                     'Support tickets per tenure month')
+
+# Materialize features
+features_df, data_hash = fs.materialize(raw_data)
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 2: MODEL REGISTRY (Simplified Simulation)
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("COMPONENT 2: MODEL REGISTRY")
+print("=" * 60)
+
+class SimpleModelRegistry:
+    """Simulates MLflow-style model registry."""
+
+    def __init__(self):
+        self.models = {}
+        self.production_model = None
+
+    def log_experiment(self, model, metrics, params, data_hash, version):
+        artifact_path = f"model_v{version}.joblib"
+        joblib.dump(model, artifact_path)
+
+        self.models[version] = {
+            'artifact_path': artifact_path, 'metrics': metrics,
+            'params': params, 'data_hash': data_hash,
+            'stage': 'staging', 'logged_at': datetime.now().isoformat()
+        }
+        print(f"  Logged model v{version}: AUC={metrics['auc']:.4f}, stage=staging")
+        return version
+
+    def promote_to_production(self, version):
+        if self.production_model:
+            self.models[self.production_model]['stage'] = 'archived'
+        self.models[version]['stage'] = 'production'
+        self.production_model = version
+        print(f"  Promoted model v{version} to production")
+
+    def get_production_model(self):
+        if self.production_model is None:
+            return None, None
+        info = self.models[self.production_model]
+        model = joblib.load(info['artifact_path'])
+        return model, info
+
+    def compare_models(self, v1, v2):
+        m1 = self.models[v1]['metrics']
+        m2 = self.models[v2]['metrics']
+        print(f"  v{v1} AUC: {m1['auc']:.4f} vs v{v2} AUC: {m2['auc']:.4f}")
+        return m2['auc'] - m1['auc']
+
+registry = SimpleModelRegistry()
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 3: TRAINING PIPELINE
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("COMPONENT 3: TRAINING PIPELINE")
+print("=" * 60)
+
+def train_churn_model(feature_store, data_hash, registry, version):
+    """Full training pipeline: features → train → evaluate → register."""
+    # Step 1: Get features from store (same as serving will use)
+    train_features = feature_store.get_training_data(data_hash)
+    feature_cols = list(feature_store.feature_definitions.keys())
+
+    # Step 2: Merge with labels
+    X = train_features[feature_cols].values
+    y = raw_data['churn'].values
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Step 3: Build pipeline
+    numeric_idx = list(range(len(feature_cols)))
+    preprocessor = ColumnTransformer([('num', StandardScaler(), numeric_idx)])
+
+    params = {'n_estimators': 200, 'max_depth': 4, 'learning_rate': 0.1}
+    pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('model', GradientBoostingClassifier(**params, random_state=42))
+    ])
+
+    # Step 4: Train
+    pipeline.fit(X_train, y_train)
+
+    # Step 5: Evaluate
+    y_pred_proba = pipeline.predict_proba(X_test)[:, 1]
+    auc = roc_auc_score(y_test, y_pred_proba)
+    y_pred = (y_pred_proba &gt; 0.5).astype(int)
+
+    metrics = {
+        'auc': auc,
+        'accuracy': (y_pred == y_test).mean(),
+        'churn_rate_test': y_test.mean(),
+        'n_train': len(X_train), 'n_test': len(X_test)
+    }
+
+    print(f"  Training complete: AUC={auc:.4f}, Accuracy={metrics['accuracy']:.4f}")
+
+    # Step 6: Register in model registry
+    registry.log_experiment(pipeline, metrics, params, data_hash, version)
+
+    return pipeline, metrics
+
+# Train initial model
+model_v1, metrics_v1 = train_churn_model(fs, data_hash, registry, version=1)
+registry.promote_to_production(1)
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 4: SERVING SIMULATION
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("COMPONENT 4: SERVING (Feature Store → Model → Prediction)")
+print("=" * 60)
+
+def serve_prediction(customer_id, feature_store, registry):
+    """Serve a prediction using features from the store and the production model."""
+    # Get features from online store (SAME computation as training)
+    features = feature_store.get_online_features(customer_id)
+    if features is None:
+        return {'error': 'Customer not found'}
+
+    feature_cols = list(feature_store.feature_definitions.keys())
+    X = np.array([[features[col] for col in feature_cols]])
+
+    # Get production model from registry
+    model, model_info = registry.get_production_model()
+    proba = float(model.predict_proba(X)[0, 1])
+
+    return {
+        'customer_id': customer_id,
+        'churn_probability': round(proba, 4),
+        'churn_prediction': int(proba &gt; 0.5),
+        'model_version': registry.production_model,
+        'data_hash': model_info['data_hash']
+    }
+
+# Simulate serving for sample customers
+print(f"\n  Sample predictions:")
+for cid in [0, 100, 500, 1000, 2500]:
+    result = serve_prediction(cid, fs, registry)
+    risk = "HIGH" if result['churn_probability'] &gt; 0.7 else "MED" if result['churn_probability'] &gt; 0.4 else "LOW"
+    print(f"    Customer {cid}: P(churn)={result['churn_probability']:.3f} ({risk}) "
+          f"[model v{result['model_version']}]")
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 5: MONITORING + DRIFT DETECTION
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("COMPONENT 5: MONITORING + DRIFT DETECTION")
+print("=" * 60)
+
+def calculate_psi(reference, production, n_bins=10):
+    breakpoints = np.percentile(reference, np.linspace(0, 100, n_bins + 1))
+    breakpoints[0], breakpoints[-1] = -np.inf, np.inf
+    breakpoints = np.unique(breakpoints)
+    eps = 1e-4
+    ref_pct = np.histogram(reference, bins=breakpoints)[0] / len(reference) + eps
+    prod_pct = np.histogram(production, bins=breakpoints)[0] / len(production) + eps
+    ref_pct, prod_pct = ref_pct / ref_pct.sum(), prod_pct / prod_pct.sum()
+    return np.sum((prod_pct - ref_pct) * np.log(prod_pct / ref_pct))
+
+# Simulate drifted production data (3 months later)
+print(f"\n  Simulating production data with drift...")
+raw_data_drifted = raw_data.copy()
+raw_data_drifted['monthly_charges'] *= 1.15  # 15% price increase
+raw_data_drifted['support_tickets'] = np.random.poisson(3.5, n_customers)  # more complaints
+raw_data_drifted['tenure_months'] += 3  # 3 months later
+
+features_drifted, drift_hash = fs.materialize(raw_data_drifted)
+
+# Compare reference vs production features
+feature_cols = list(fs.feature_definitions.keys())
+ref_features = fs.get_training_data(data_hash)
+prod_features = fs.get_training_data(drift_hash)
+
+print(f"\n  Drift Detection Results:")
+print(f"  {'Feature':<20} {'PSI':>8} {'KS Stat':>10} {'KS p-val':>10} {'Alert':>8}")
+print(f"  {'-'*58}")
+
+drift_alerts = []
+for col in feature_cols:
+    psi = calculate_psi(ref_features[col].values, prod_features[col].values)
+    ks_stat, ks_pval = stats.ks_2samp(ref_features[col].values, prod_features[col].values)
+    alert = "🔴" if psi &gt; 0.25 else ("🟡" if psi &gt; 0.1 else "🟢")
+    drift_alerts.append({'feature': col, 'psi': psi, 'alert': alert})
+    print(f"  {col:<20} {psi:>8.4f} {ks_stat:>10.4f} {ks_pval:>10.6f} {alert:>8}")
+
+significant_drift = sum(1 for d in drift_alerts if d['psi'] &gt; 0.25)
+print(f"\n  Features with significant drift: {significant_drift}/{len(feature_cols)}")
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 6: AUTOMATED RETRAINING
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("COMPONENT 6: AUTOMATED RETRAINING")
+print("=" * 60)
+
+if significant_drift &gt;= 2:
+    print(f"  ⚡ Drift threshold exceeded — triggering retraining pipeline")
+
+    # Retrain on drifted data
+    model_v2, metrics_v2 = train_churn_model(fs, drift_hash, registry, version=2)
+
+    # Validation gate: new model must beat current production model
+    improvement = registry.compare_models(1, 2)
+    min_improvement = 0.005  # require at least 0.5% AUC improvement
+
+    if improvement &gt; min_improvement:
+        print(f"  ✅ Validation passed: +{improvement:.4f} AUC improvement")
+        registry.promote_to_production(2)
+        print(f"  🚀 Model v2 deployed to production")
+    elif improvement &gt; -min_improvement:
+        print(f"  ⚠️ Marginal improvement: {improvement:+.4f} AUC — deploying as data is newer")
+        registry.promote_to_production(2)
+    else:
+        print(f"  ❌ Validation failed: {improvement:+.4f} AUC — keeping v1 in production")
+        print(f"  → Manual investigation required")
+else:
+    print(f"  ✅ No significant drift — no retraining needed")
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENT 7: SYSTEM STATUS DASHBOARD
+# ═══════════════════════════════════════════════════════════════
+print(f"\n{'=' * 60}")
+print("SYSTEM STATUS DASHBOARD")
+print("=" * 60)
+
+prod_model, prod_info = registry.get_production_model()
+print(f"  Production model: v{registry.production_model}")
+print(f"  Model AUC: {prod_info['metrics']['auc']:.4f}")
+print(f"  Training data hash: {prod_info['data_hash']}")
+print(f"  Registered features: {len(fs.feature_definitions)}")
+print(f"  Online store entities: {len(fs.online_store)}")
+print(f"  Models in registry: {len(registry.models)}")
+for v, info in registry.models.items():
+    print(f"    v{v}: stage={info['stage']}, AUC={info['metrics']['auc']:.4f}")
+
+# ═══════════════════════════════════════════════════════════════
+# VISUALIZATION
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+fig.suptitle('End-to-End ML System — Churn Prediction Dashboard', fontsize=16, color='white')
+
+# Plot 1: Feature drift PSI
+ax = axes[0, 0]
+psi_values = [d['psi'] for d in drift_alerts]
+colors = ['#f85149' if p &gt; 0.25 else '#f0883e' if p &gt; 0.1 else '#3fb950' for p in psi_values]
+ax.barh(feature_cols, psi_values, color=colors, alpha=0.8, edgecolor='white')
+ax.axvline(0.1, color='#f0883e', linestyle='--', alpha=0.7, label='Moderate (0.1)')
+ax.axvline(0.25, color='#f85149', linestyle='--', alpha=0.7, label='Significant (0.25)')
+ax.set_xlabel('PSI')
+ax.set_title('Feature Drift Detection')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2, axis='x')
+
+# Plot 2: Model comparison
+ax = axes[0, 1]
+versions = list(registry.models.keys())
+aucs = [registry.models[v]['metrics']['auc'] for v in versions]
+stages = [registry.models[v]['stage'] for v in versions]
+bar_colors = ['#3fb950' if s == 'production' else '#58a6ff' if s == 'staging' else '#30363d' for s in stages]
+ax.bar([f'v{v}\n({s})' for v, s in zip(versions, stages)], aucs, color=bar_colors, alpha=0.8, edgecolor='white')
+ax.set_ylabel('AUC')
+ax.set_title('Model Registry — Version Comparison')
+ax.grid(True, alpha=0.2, axis='y')
+
+# Plot 3: Feature distributions (reference vs production)
+ax = axes[1, 0]
+feat = 'monthly_charges'
+ax.hist(ref_features[feat], bins=30, alpha=0.5, color='#58a6ff', density=True, label='Reference (training)')
+ax.hist(prod_features[feat], bins=30, alpha=0.5, color='#f85149', density=True, label='Production (drifted)')
+ax.set_xlabel(feat)
+ax.set_ylabel('Density')
+ax.set_title(f'{feat} — Distribution Shift')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Plot 4: System architecture diagram (text-based)
+ax = axes[1, 1]
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 10)
+ax.set_aspect('equal')
+
+boxes = [
+    (1, 8, 'Raw Data'), (4, 8, 'Feature\nStore'), (7.5, 8, 'Training\nPipeline'),
+    (7.5, 5.5, 'Model\nRegistry'), (4, 5.5, 'Serving\nAPI'), (1, 5.5, 'Client'),
+    (4, 3, 'Monitoring\n(PSI/KS)'), (7.5, 3, 'Retrain\nTrigger')
+]
+for x, y, label in boxes:
+    ax.add_patch(plt.Rectangle((x-0.8, y-0.6), 1.6, 1.2, fill=True,
+                                facecolor='#161b22', edgecolor='#58a6ff', linewidth=1.5))
+    ax.text(x, y, label, ha='center', va='center', fontsize=7, color='white')
+
+arrows = [(2.2, 8, 3.2, 8), (5.2, 8, 6.7, 8), (7.5, 7.2, 7.5, 6.3),
+          (6.7, 5.5, 5.2, 5.5), (3.2, 5.5, 1.8, 5.5), (4, 4.9, 4, 3.8),
+          (5.2, 3, 6.7, 3), (7.5, 3.8, 7.5, 4.9)]
+for x1, y1, x2, y2 in arrows:
+    ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                arrowprops=dict(arrowstyle='->', color='#3fb950', lw=1.5))
+
+ax.set_title('System Architecture')
+ax.axis('off')
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_59_ml_system.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ ML system dashboard saved as project_59_ml_system.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>A production ML system is more than a model — it's Feature Store + Training Pipeline + Model Registry + Serving + Monitoring + Retraining Loop</li>
+        <li>The feature store eliminates training/serving skew — the #1 production ML bug</li>
+        <li>Model registries provide versioning, lineage, and rollback — essential for production reliability</li>
+        <li>Automated retraining with validation gates keeps the model fresh without deploying regressions</li>
+        <li>Start simple (notebook + cron) and add components (Feast, MLflow, Airflow) only when the pain justifies the complexity</li>
+        <li>This project integrates everything from Projects 23, 42, 55, and 56 into a cohesive system</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 60</h3>
+    <ul>
+        <li>We've mastered the full lifecycle of statistical and predictive modeling in Python</li>
+        <li>Project 60 is the <strong>final bridge</strong> — understanding when statistical models hit their ceiling</li>
+        <li>We'll explore why tabular ML excels at structured data but struggles with images, text, and sequences</li>
+        <li>This sets the stage for the next journey: deep learning, representation learning, and neural architectures</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_58.html">← Project 58: Bandit Algorithms</a>
+    <a href="project_60.html">Project 60: Bridge to Deep Learning →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

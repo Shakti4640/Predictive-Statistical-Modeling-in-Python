@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 54 — Structural Equation Modeling — Modeling Latent Causes</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 54: Structural Equation Modeling — Modeling Latent Causes</h1>
+<p>
+    <span class="tag">SEM</span>
+    <span class="tag">Latent Variables</span>
+    <span class="tag">Path Diagrams</span>
+    <span class="tag">Factor Analysis</span>
+    <span class="tag">semopy</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 37, 40, 24</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>An HR analytics team wants to understand what drives employee performance</li>
+        <li>They measure observable variables: test scores, peer reviews, project completion rate, attendance, training hours, satisfaction surveys</li>
+        <li>But the real drivers are LATENT (unobservable): "competence," "motivation," and "work environment quality"</li>
+        <li>PCA (Project 24) can find latent dimensions — but doesn't model causal relationships between them</li>
+        <li>Causal inference (Project 37) handles causation — but assumes all variables are observed</li>
+        <li>Goal → use SEM to model how latent constructs cause observable measurements AND how latent constructs influence each other</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 24: PCA extracts latent dimensions — SEM's measurement model does the same but with theory-driven structure</li>
+        <li>From Project 37: causal inference estimates treatment effects — SEM models entire causal systems simultaneously</li>
+        <li>From Project 40: mixed effects handle grouped data — SEM handles latent groupings</li>
+        <li>SEM has two parts: (1) measurement model (latent → observed) and (2) structural model (latent → latent)</li>
+        <li>Use the semopy library — Python's implementation of SEM with LISREL-style syntax</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic data where latent variables cause observed measurements</li>
+        <li>Define the measurement model: which observed variables load onto which latent factors</li>
+        <li>Define the structural model: how latent factors influence each other</li>
+        <li>Fit the SEM using maximum likelihood estimation</li>
+        <li>Evaluate model fit using CFI, RMSEA, and chi-square statistics</li>
+        <li>Interpret path coefficients and compare with simple regression</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Start with a theory-driven model — SEM requires you to specify the structure BEFORE fitting</li>
+        <li>✅ Check model fit indices: CFI > 0.95, RMSEA < 0.06, SRMR < 0.08</li>
+        <li>✅ Verify factor loadings are significant and > 0.4 — weak loadings mean the indicator doesn't measure the construct</li>
+        <li>✅ Report both standardized and unstandardized path coefficients</li>
+        <li>✅ Use at least 3 indicators per latent variable — fewer leads to identification problems</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use SEM for data exploration — it's a confirmatory technique; use EFA/PCA (Project 24) for exploration</li>
+        <li>❌ Do NOT add paths just to improve fit — every path must be theoretically justified</li>
+        <li>❌ Do NOT ignore model fit — a poorly fitting model means your theory doesn't match the data</li>
+        <li>❌ Do NOT use SEM with small samples — need at least 200 observations, ideally 10× the number of parameters</li>
+        <li>❌ Do NOT confuse SEM with causal proof — SEM tests if data is CONSISTENT with a causal model, not that it's true</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>SEM</strong> → when you have latent variables AND causal paths between them; confirmatory analysis</li>
+        <li>🔹 <strong>Confirmatory Factor Analysis (CFA)</strong> → SEM without structural paths; just the measurement model</li>
+        <li>🔹 <strong>PCA (Project 24)</strong> → exploratory dimension reduction; no causal assumptions</li>
+        <li>🔹 <strong>Path Analysis</strong> → SEM without latent variables; causal paths between observed variables only</li>
+        <li>🔹 <strong>Causal Inference (Project 37)</strong> → when you need treatment effect estimates, not full system modeling</li>
+        <li>🔹 <strong>Mixed Effects (Project 40)</strong> → when the grouping structure is observed (schools, hospitals)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you don't have a theoretical model — SEM is confirmatory, not exploratory</li>
+        <li>🚫 When sample size is small (< 200) — SEM requires large samples for stable estimates</li>
+        <li>🚫 When variables are highly non-normal — standard SEM assumes multivariate normality</li>
+        <li>🚫 When you just need prediction — SEM is for understanding causal structure, not prediction accuracy</li>
+        <li>🚫 When the causal structure is unknown — use exploratory methods first, then confirm with SEM</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The Two Parts of SEM</h3>
+    <ul>
+        <li><strong>Measurement Model</strong>: latent variable → observed indicators (like factor analysis)</li>
+        <li>Example: "Competence" (latent) → test_score, project_quality, peer_review (observed)</li>
+        <li><strong>Structural Model</strong>: latent variable → latent variable (causal paths)</li>
+        <li>Example: "Motivation" → "Performance", "Work Environment" → "Motivation"</li>
+    </ul>
+
+    <h3>Path Diagram Notation</h3>
+    <ul>
+        <li>Circles/ovals = latent variables (unobserved constructs)</li>
+        <li>Rectangles = observed variables (measured indicators)</li>
+        <li>Single-headed arrows = causal/directional paths (regression)</li>
+        <li>Double-headed arrows = correlations (no causal direction)</li>
+        <li>Each arrow has a path coefficient (like a regression weight)</li>
+    </ul>
+
+    <h3>Estimation</h3>
+    <ul>
+        <li>SEM estimates all parameters simultaneously using Maximum Likelihood (ML)</li>
+        <li>ML finds parameters that make the model-implied covariance matrix as close as possible to the observed covariance matrix</li>
+        <li>Σ(θ) ≈ S where Σ(θ) is model-implied and S is observed covariance</li>
+        <li>The discrepancy between Σ(θ) and S is measured by the chi-square statistic</li>
+    </ul>
+
+    <h3>Model Fit Indices</h3>
+    <ul>
+        <li><strong>Chi-square</strong>: tests if Σ(θ) = S exactly; sensitive to sample size; p > 0.05 desired but rarely achieved</li>
+        <li><strong>CFI</strong> (Comparative Fit Index): compares model to null model; > 0.95 = good fit</li>
+        <li><strong>RMSEA</strong> (Root Mean Square Error of Approximation): < 0.06 = good, < 0.08 = acceptable</li>
+        <li><strong>SRMR</strong> (Standardized Root Mean Residual): < 0.08 = good fit</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Model not identified</strong> — too many parameters relative to observed covariances; need at least 3 indicators per latent</li>
+        <li>⚠️ <strong>Heywood cases</strong> — negative variance estimates indicate model misspecification</li>
+        <li>⚠️ <strong>Overfitting with modification indices</strong> — adding paths to improve fit without theory leads to capitalization on chance</li>
+        <li>⚠️ <strong>Confusing fit with truth</strong> — a well-fitting model isn't necessarily the correct causal model; equivalent models exist</li>
+        <li>⚠️ <strong>Non-normal data</strong> — standard ML estimation assumes normality; use robust estimators for skewed data</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>SEM estimation is O(p³) where p = number of observed variables — cubic in the number of indicators</li>
+        <li>Practical limit: ~50-100 observed variables; beyond that, use parceling or Bayesian SEM</li>
+        <li>Sample size: minimum 200, recommended 10-20 observations per estimated parameter</li>
+        <li>semopy handles moderate models efficiently; for large models, consider lavaan (R) via rpy2</li>
+        <li>Bayesian SEM (via PyMC) handles small samples better but is computationally expensive</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Path diagrams are highly visual — stakeholders can see the causal story at a glance</li>
+        <li>✅ Standardized path coefficients are comparable — "motivation has a 0.6 effect on performance"</li>
+        <li>✅ Direct, indirect, and total effects decompose complex causal chains</li>
+        <li>⚠️ Latent variables are abstract — "what exactly IS competence?" requires careful definition</li>
+        <li>⚠️ Equivalent models can fit equally well — the data alone can't distinguish between them</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from scipy import stats
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 1: Generate Data From a Known SEM Structure
+# ═══════════════════════════════════════════════════════════════
+n = 800
+
+# Latent variables (unobserved)
+work_environment = np.random.normal(0, 1, n)
+motivation = 0.5 * work_environment + np.random.normal(0, 0.7, n)
+competence = 0.3 * motivation + np.random.normal(0, 0.8, n)
+performance = 0.4 * competence + 0.35 * motivation + 0.2 * work_environment + np.random.normal(0, 0.5, n)
+
+# Observed indicators of Work Environment (latent → observed)
+office_quality = 0.8 * work_environment + np.random.normal(0, 0.4, n)
+team_support = 0.7 * work_environment + np.random.normal(0, 0.5, n)
+resource_access = 0.65 * work_environment + np.random.normal(0, 0.5, n)
+
+# Observed indicators of Motivation
+engagement_score = 0.85 * motivation + np.random.normal(0, 0.3, n)
+initiative_rating = 0.7 * motivation + np.random.normal(0, 0.5, n)
+goal_commitment = 0.75 * motivation + np.random.normal(0, 0.4, n)
+
+# Observed indicators of Competence
+test_score = 0.8 * competence + np.random.normal(0, 0.4, n)
+skill_assessment = 0.75 * competence + np.random.normal(0, 0.45, n)
+certification_level = 0.6 * competence + np.random.normal(0, 0.6, n)
+
+# Observed indicators of Performance
+project_completion = 0.85 * performance + np.random.normal(0, 0.3, n)
+quality_rating = 0.8 * performance + np.random.normal(0, 0.35, n)
+peer_review = 0.7 * performance + np.random.normal(0, 0.5, n)
+
+df = pd.DataFrame({
+    'office_quality': office_quality, 'team_support': team_support, 'resource_access': resource_access,
+    'engagement': engagement_score, 'initiative': initiative_rating, 'goal_commit': goal_commitment,
+    'test_score': test_score, 'skill_assess': skill_assessment, 'cert_level': certification_level,
+    'proj_complete': project_completion, 'quality_rating': quality_rating, 'peer_review': peer_review
+})
+
+# Standardize
+scaler = StandardScaler()
+df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+
+print("=== Employee Performance Data ===")
+print(f"  Employees: {n}")
+print(f"  Observed variables: {len(df.columns)}")
+print(f"  Latent constructs: 4 (Work Environment, Motivation, Competence, Performance)")
+print(f"\n  Correlation matrix (sample):")
+corr = df_scaled.corr()
+print(corr.iloc[:4, :4].round(3).to_string())
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2: SEM Specification (semopy syntax)
+# ═══════════════════════════════════════════════════════════════
+model_spec = """
+# Measurement Model (latent =~ indicators)
+WorkEnv =~ office_quality + team_support + resource_access
+Motivation =~ engagement + initiative + goal_commit
+Competence =~ test_score + skill_assess + cert_level
+Performance =~ proj_complete + quality_rating + peer_review
+
+# Structural Model (latent ~ latent)
+Motivation ~ WorkEnv
+Competence ~ Motivation
+Performance ~ Competence + Motivation + WorkEnv
+"""
+
+print(f"\n=== SEM Model Specification ===")
+print(model_spec)
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 3: Fit SEM using semopy (if available) or manual approach
+# ═══════════════════════════════════════════════════════════════
+try:
+    import semopy
+    sem_model = semopy.Model(model_spec)
+    result = sem_model.fit(df_scaled)
+
+    print(f"\n=== SEM Results (semopy) ===")
+    estimates = sem_model.inspect()
+    print(estimates.to_string())
+
+    # Extract fit indices
+    fit_stats = semopy.calc_stats(sem_model)
+    print(f"\n=== Model Fit Indices ===")
+    for stat_name in ['chi2', 'dof', 'CFI', 'RMSEA', 'SRMR']:
+        if stat_name in fit_stats.columns:
+            print(f"  {stat_name}: {fit_stats[stat_name].values[0]:.4f}")
+
+    sem_available = True
+except ImportError:
+    print(f"\n  semopy not installed — using manual factor analysis approach")
+    sem_available = False
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: Manual Factor Analysis (Confirmatory-style)
+# ═══════════════════════════════════════════════════════════════
+from numpy.linalg import svd
+
+print(f"\n=== Manual Confirmatory Factor Analysis ===")
+
+# Define factor structure
+factors = {
+    'WorkEnv': ['office_quality', 'team_support', 'resource_access'],
+    'Motivation': ['engagement', 'initiative', 'goal_commit'],
+    'Competence': ['test_score', 'skill_assess', 'cert_level'],
+    'Performance': ['proj_complete', 'quality_rating', 'peer_review']
+}
+
+# Extract factor scores using indicator means (simple approach)
+factor_scores = {}
+for factor, indicators in factors.items():
+    # Factor score = first principal component of indicators
+    X_factor = df_scaled[indicators].values
+    U, S, Vt = svd(X_factor, full_matrices=False)
+    factor_scores[factor] = U[:, 0] * S[0]
+
+    # Factor loadings
+    loadings = np.corrcoef(factor_scores[factor], X_factor.T)[0, 1:]
+    print(f"\n  {factor}:")
+    for ind, loading in zip(indicators, loadings):
+        strength = "strong" if abs(loading) > 0.7 else "moderate" if abs(loading) > 0.4 else "weak"
+        print(f"    {ind:<18}: loading = {loading:.3f} ({strength})")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 5: Structural Path Analysis (regression between factors)
+# ═══════════════════════════════════════════════════════════════
+from sklearn.linear_model import LinearRegression
+
+print(f"\n=== Structural Path Coefficients ===")
+
+# Path: WorkEnv → Motivation
+reg1 = LinearRegression().fit(
+    np.column_stack([factor_scores['WorkEnv']]),
+    factor_scores['Motivation'])
+print(f"  WorkEnv → Motivation:  β = {reg1.coef_[0]:.3f}")
+
+# Path: Motivation → Competence
+reg2 = LinearRegression().fit(
+    np.column_stack([factor_scores['Motivation']]),
+    factor_scores['Competence'])
+print(f"  Motivation → Competence: β = {reg2.coef_[0]:.3f}")
+
+# Path: Competence + Motivation + WorkEnv → Performance
+reg3 = LinearRegression().fit(
+    np.column_stack([factor_scores['Competence'],
+                     factor_scores['Motivation'],
+                     factor_scores['WorkEnv']]),
+    factor_scores['Performance'])
+print(f"  Competence → Performance:  β = {reg3.coef_[0]:.3f}")
+print(f"  Motivation → Performance:  β = {reg3.coef_[1]:.3f}")
+print(f"  WorkEnv → Performance:     β = {reg3.coef_[2]:.3f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 6: Direct, Indirect, and Total Effects
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== Effect Decomposition: WorkEnv → Performance ===")
+direct_we_perf = reg3.coef_[2]
+indirect_via_mot = reg1.coef_[0] * reg3.coef_[1]
+indirect_via_comp = reg1.coef_[0] * reg2.coef_[0] * reg3.coef_[0]
+total = direct_we_perf + indirect_via_mot + indirect_via_comp
+
+print(f"  Direct effect:                    {direct_we_perf:.3f}")
+print(f"  Indirect via Motivation:          {indirect_via_mot:.3f}")
+print(f"  Indirect via Motivation→Competence: {indirect_via_comp:.3f}")
+print(f"  Total effect:                     {total:.3f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 7: Visualization
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Plot 1: Factor loadings heatmap
+ax = axes[0, 0]
+loading_matrix = np.zeros((12, 4))
+all_indicators = []
+for j, (factor, indicators) in enumerate(factors.items()):
+    for i, ind in enumerate(indicators):
+        row = j * 3 + i
+        loading_matrix[row, j] = np.corrcoef(factor_scores[factor], df_scaled[ind].values)[0, 1]
+        all_indicators.append(ind)
+
+im = ax.imshow(loading_matrix, cmap='RdBu_r', vmin=-1, vmax=1, aspect='auto')
+ax.set_xticks(range(4))
+ax.set_xticklabels(list(factors.keys()), rotation=45, ha='right', fontsize=8)
+ax.set_yticks(range(12))
+ax.set_yticklabels(all_indicators, fontsize=7)
+ax.set_title('Factor Loading Matrix')
+plt.colorbar(im, ax=ax, shrink=0.8)
+
+# Plot 2: Path coefficients
+ax = axes[0, 1]
+paths = ['WE→Mot', 'Mot→Comp', 'Comp→Perf', 'Mot→Perf', 'WE→Perf']
+coeffs = [reg1.coef_[0], reg2.coef_[0], reg3.coef_[0], reg3.coef_[1], reg3.coef_[2]]
+colors = ['#3fb950' if c > 0 else '#f85149' for c in coeffs]
+ax.barh(paths, coeffs, color=colors, alpha=0.8, edgecolor='white')
+ax.axvline(0, color='white', linewidth=0.5)
+ax.set_xlabel('Standardized Path Coefficient (β)')
+ax.set_title('Structural Path Coefficients')
+ax.grid(True, alpha=0.2, axis='x')
+
+# Plot 3: Effect decomposition
+ax = axes[1, 0]
+effects = ['Direct', 'Via Motivation', 'Via Mot→Comp', 'Total']
+values = [direct_we_perf, indirect_via_mot, indirect_via_comp, total]
+colors_eff = ['#58a6ff', '#3fb950', '#f0883e', '#bc8cff']
+ax.bar(effects, values, color=colors_eff, alpha=0.8, edgecolor='white')
+ax.set_ylabel('Effect Size')
+ax.set_title('WorkEnv → Performance: Effect Decomposition')
+ax.grid(True, alpha=0.2, axis='y')
+
+# Plot 4: Factor score correlations
+ax = axes[1, 1]
+factor_df = pd.DataFrame(factor_scores)
+factor_corr = factor_df.corr()
+im2 = ax.imshow(factor_corr.values, cmap='coolwarm', vmin=-1, vmax=1)
+ax.set_xticks(range(4))
+ax.set_xticklabels(factor_corr.columns, rotation=45, ha='right', fontsize=9)
+ax.set_yticks(range(4))
+ax.set_yticklabels(factor_corr.columns, fontsize=9)
+for i in range(4):
+    for j in range(4):
+        ax.text(j, i, f'{factor_corr.values[i,j]:.2f}', ha='center', va='center',
+                color='black' if abs(factor_corr.values[i,j]) < 0.5 else 'white', fontsize=9)
+ax.set_title('Latent Factor Correlations')
+plt.colorbar(im2, ax=ax, shrink=0.8)
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_54_sem.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ SEM analysis saved as project_54_sem.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>SEM combines measurement models (latent → observed) with structural models (latent → latent) in one framework</li>
+        <li>It's confirmatory — you specify the theory first, then test if the data supports it</li>
+        <li>Direct, indirect, and total effects decompose complex causal chains through latent variables</li>
+        <li>Model fit indices (CFI, RMSEA, SRMR) tell you if your theoretical model matches the observed data</li>
+        <li>SEM doesn't prove causation — it tests whether data is consistent with a proposed causal structure</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 55</h3>
+    <ul>
+        <li>We've built sophisticated models — but how do we get them into production where they serve real users?</li>
+        <li>Project 55 introduces <strong>production ML pipelines</strong> — packaging a model as a REST API</li>
+        <li>We'll serialize models with joblib, build FastAPI endpoints, validate inputs with pydantic, and containerize with Docker</li>
+        <li>This bridges the gap between "model works in a notebook" and "model serves 1000 requests per second"</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_53.html">← Project 53: Counterfactual Explanations</a>
+    <a href="project_55.html">Project 55: Production ML Pipeline →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

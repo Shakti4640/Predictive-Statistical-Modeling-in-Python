@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 25 — Predicting Sales With Time — Simple Time Series Decomposition</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 25: Predicting Sales With Time — Simple Time Series Decomposition</h1>
+<p>
+    <span class="tag">Time Series</span>
+    <span class="tag">Trend</span>
+    <span class="tag">Seasonality</span>
+    <span class="tag">Residuals</span>
+    <span class="tag">Decomposition</span>
+    <span class="tag">ACF</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Projects 5, 20</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a data analyst at a retail chain — management wants to understand monthly sales patterns over the past 4 years</li>
+        <li>Sales seem to go up overall, spike every December, and dip every February</li>
+        <li>They ask: "Is the growth real or just seasonal? What's the underlying trend? Can we separate the pattern from the noise?"</li>
+        <li>Every model we've built so far (Projects 1–24) treats each row as independent — no notion of time ordering</li>
+        <li>Goal → decompose the sales series into trend, seasonality, and residual components to understand what's really happening</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 5: correlation measures linear relationships — but time series have autocorrelation (a value correlates with its own past)</li>
+        <li>Recall from Project 20: polynomial features captured nonlinear patterns — time series have their own nonlinear structure (cycles, trends)</li>
+        <li>A time series = Trend + Seasonality + Residual (additive) or Trend × Seasonality × Residual (multiplicative)</li>
+        <li>Use statsmodels seasonal_decompose to split the series into these three components</li>
+        <li>Use the ACF (autocorrelation function) to detect repeating patterns and lag dependencies</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate 4 years of monthly sales data with a known trend, seasonal pattern, and random noise</li>
+        <li>Visualize the raw series and identify visual patterns</li>
+        <li>Apply additive and multiplicative decomposition</li>
+        <li>Plot ACF to confirm the seasonal period and detect autocorrelation structure</li>
+        <li>Extract the trend to answer "is the business actually growing?"</li>
+        <li>Examine residuals — if they look random, the decomposition captured the signal</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Plot the raw series first — always look at your data before decomposing</li>
+        <li>✅ Choose additive vs multiplicative based on whether seasonal swings grow with the level</li>
+        <li>✅ Set the correct period parameter — monthly data with yearly seasonality → period=12</li>
+        <li>✅ Check residuals after decomposition — they should look like white noise</li>
+        <li>✅ Use ACF to confirm the seasonal period before assuming it</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT apply standard regression (Project 2) directly to time series — it ignores temporal dependencies</li>
+        <li>❌ Do NOT assume additive decomposition by default — if seasonal amplitude grows with the level, use multiplicative</li>
+        <li>❌ Do NOT confuse trend with seasonality — a December spike is seasonal, not a trend</li>
+        <li>❌ Do NOT ignore the residuals — large residual patterns mean the decomposition missed something</li>
+        <li>❌ Do NOT use decomposition alone for forecasting — it describes the past but doesn't predict the future (that's Project 26)</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Additive decomposition</strong> → when seasonal fluctuations are roughly constant regardless of the level</li>
+        <li>🔹 <strong>Multiplicative decomposition</strong> → when seasonal swings grow proportionally with the trend (e.g., 10% holiday bump)</li>
+        <li>🔹 <strong>ACF plot</strong> → to detect the seasonal period and check for autocorrelation</li>
+        <li>🔹 <strong>Moving average</strong> → to smooth out noise and reveal the trend</li>
+        <li>🔹 <strong>Standard regression</strong> → only if the data has no temporal structure (Project 2)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When data has no time ordering — decomposition is meaningless on cross-sectional data</li>
+        <li>🚫 When the series is too short — you need at least 2 full seasonal cycles (24 months for monthly data)</li>
+        <li>🚫 When you need forecasts — decomposition is descriptive, not predictive (use ARIMA, Project 26)</li>
+        <li>🚫 When the seasonal pattern changes over time — classical decomposition assumes a fixed pattern</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Additive vs Multiplicative Model</h3>
+    <ul>
+        <li>Additive: Y(t) = Trend(t) + Seasonal(t) + Residual(t)</li>
+        <li>Multiplicative: Y(t) = Trend(t) × Seasonal(t) × Residual(t)</li>
+        <li>If you take the log of a multiplicative series, it becomes additive: log(T × S × R) = log(T) + log(S) + log(R)</li>
+        <li>Quick test: if the seasonal amplitude is proportional to the level → multiplicative</li>
+    </ul>
+
+    <h3>How seasonal_decompose Works</h3>
+    <ul>
+        <li>Step 1: Estimate the trend using a centered moving average (window = period)</li>
+        <li>Step 2: Remove the trend → detrended = observed - trend (additive) or observed / trend (multiplicative)</li>
+        <li>Step 3: Average the detrended values for each season position (e.g., all Januaries) → seasonal component</li>
+        <li>Step 4: Residual = observed - trend - seasonal (additive) or observed / (trend × seasonal) (multiplicative)</li>
+    </ul>
+
+    <h3>Autocorrelation Function (ACF)</h3>
+    <ul>
+        <li>ACF measures the correlation between a series and its lagged version</li>
+        <li>ACF at lag k = correlation(Y(t), Y(t-k))</li>
+        <li>If ACF spikes at lag 12 → the series repeats every 12 periods (yearly seasonality in monthly data)</li>
+        <li>A slowly decaying ACF suggests a strong trend — the series is not stationary</li>
+        <li>This connects to Pearson correlation (Project 5) — but now the correlation is with the series' own past</li>
+    </ul>
+
+    <h3>Stationarity — Why It Matters</h3>
+    <ul>
+        <li>A stationary series has constant mean and variance over time — no trend, no changing seasonality</li>
+        <li>Most statistical models (ARIMA, Project 26) require stationarity</li>
+        <li>Decomposition helps you check: if the trend is flat and residuals are random, the detrended series may be stationary</li>
+        <li>Non-stationary series need differencing or detrending before modeling</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Wrong period</strong> — setting period=4 on monthly data when the true cycle is 12 months</li>
+        <li>⚠️ <strong>Too short a series</strong> — decomposition needs at least 2 full cycles; 1 year of monthly data isn't enough</li>
+        <li>⚠️ <strong>Additive on multiplicative data</strong> — residuals will show a fan shape (growing variance)</li>
+        <li>⚠️ <strong>Missing values</strong> — seasonal_decompose can't handle NaNs in the middle of the series</li>
+        <li>⚠️ <strong>Confusing decomposition with forecasting</strong> — decomposition explains the past; it doesn't predict the future</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Classical decomposition is O(n) — very fast even on long series</li>
+        <li>ACF computation is O(n × max_lag) — fast for typical business data</li>
+        <li>For very long series (millions of points), consider downsampling or STL decomposition (more robust)</li>
+        <li>STL (Seasonal and Trend decomposition using Loess) handles changing seasonality — classical decomposition doesn't</li>
+        <li>Memory is rarely an issue — time series are typically 1D arrays</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Decomposition is highly interpretable — "sales grow $500/month, spike 20% in December, noise is ±$200"</li>
+        <li>✅ Trend component directly answers "is the business growing?"</li>
+        <li>✅ Seasonal component shows exactly when peaks and troughs occur</li>
+        <li>✅ Residuals reveal anomalies — a large residual means something unusual happened</li>
+        <li>⚠️ The moving average trend loses data at the edges (first and last period/2 points are NaN)</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.graphics.tsaplots import plot_acf
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Generate 4 years of monthly sales data ───
+np.random.seed(42)
+n_months = 48
+dates = pd.date_range(start='2020-01-01', periods=n_months, freq='MS')
+
+# Known components
+trend = np.linspace(10000, 18000, n_months)  # steady growth
+seasonal_pattern = [0, -500, 200, 400, 300, -200, -400, -300, 100, 500, 800, 2000]  # Dec spike
+seasonality = np.tile(seasonal_pattern, n_months // 12)
+noise = np.random.normal(0, 300, n_months)
+
+sales = trend + seasonality + noise
+ts = pd.Series(sales, index=dates, name='monthly_sales')
+
+print("=== Monthly Sales Time Series ===")
+print(f"  Period: {dates[0].strftime('%Y-%m')} to {dates[-1].strftime('%Y-%m')}")
+print(f"  Points: {n_months}")
+print(f"  Min: ${sales.min():,.0f}, Max: ${sales.max():,.0f}")
+print(f"  Mean: ${sales.mean():,.0f}, Std: ${sales.std():,.0f}")
+
+# ─── Step 2: Plot the raw series ───
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(dates, sales, color='#58a6ff', linewidth=1.5, marker='o', markersize=3)
+ax.set_title('Raw Monthly Sales')
+ax.set_ylabel('Sales ($)')
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_25_raw_series.png', dpi=100, bbox_inches='tight')
+print("\n✅ Raw series plot saved as project_25_raw_series.png")
+
+# ─── Step 3: Additive decomposition ───
+decomp_add = seasonal_decompose(ts, model='additive', period=12)
+
+fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
+decomp_add.observed.plot(ax=axes[0], color='#58a6ff')
+axes[0].set_ylabel('Observed')
+axes[0].set_title('Additive Decomposition')
+
+decomp_add.trend.plot(ax=axes[1], color='#f0883e')
+axes[1].set_ylabel('Trend')
+
+decomp_add.seasonal.plot(ax=axes[2], color='#3fb950')
+axes[2].set_ylabel('Seasonal')
+
+decomp_add.resid.plot(ax=axes[3], color='#f85149', marker='o', markersize=2, linestyle='none')
+axes[3].set_ylabel('Residual')
+
+for ax in axes:
+    ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_25_decomposition.png', dpi=100, bbox_inches='tight')
+print("✅ Decomposition plot saved as project_25_decomposition.png")
+
+# ─── Step 4: Inspect extracted components ───
+print("\n=== Extracted Seasonal Pattern (monthly offsets) ===")
+seasonal_vals = decomp_add.seasonal[:12].values
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+for m, v in zip(months, seasonal_vals):
+    bar = "+" * int(max(0, v) / 100) + "-" * int(max(0, -v) / 100)
+    print(f"  {m}: {v:>+8.0f}  {bar}")
+
+print(f"\n=== Trend Summary ===")
+trend_vals = decomp_add.trend.dropna()
+print(f"  Start: ${trend_vals.iloc[0]:,.0f}")
+print(f"  End:   ${trend_vals.iloc[-1]:,.0f}")
+print(f"  Growth: ${trend_vals.iloc[-1] - trend_vals.iloc[0]:,.0f} over {len(trend_vals)} months")
+print(f"  Monthly growth: ~${(trend_vals.iloc[-1] - trend_vals.iloc[0]) / len(trend_vals):,.0f}/month")
+
+# ─── Step 5: Residual analysis ───
+resid = decomp_add.resid.dropna()
+print(f"\n=== Residual Analysis ===")
+print(f"  Mean: {resid.mean():.1f} (should be ~0)")
+print(f"  Std:  {resid.std():.1f}")
+print(f"  Max absolute: {resid.abs().max():.1f}")
+
+# ─── Step 6: ACF plot — detect autocorrelation ───
+fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+
+plot_acf(ts, lags=36, ax=axes[0], color='#58a6ff')
+axes[0].set_title('ACF of Original Series')
+axes[0].grid(True, alpha=0.2)
+
+plot_acf(resid, lags=24, ax=axes[1], color='#f0883e')
+axes[1].set_title('ACF of Residuals (after decomposition)')
+axes[1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_25_acf.png', dpi=100, bbox_inches='tight')
+print("✅ ACF plots saved as project_25_acf.png")
+
+# ─── Step 7: Multiplicative decomposition comparison ───
+# Create multiplicative data: seasonal effect grows with level
+trend_mult = np.linspace(10000, 18000, n_months)
+seasonal_mult_pattern = [1.0, 0.95, 1.02, 1.04, 1.03, 0.98, 0.96, 0.97, 1.01, 1.05, 1.08, 1.20]
+seasonality_mult = np.tile(seasonal_mult_pattern, n_months // 12)
+noise_mult = np.random.normal(1, 0.02, n_months)
+
+sales_mult = trend_mult * seasonality_mult * noise_mult
+ts_mult = pd.Series(sales_mult, index=dates, name='sales_multiplicative')
+
+decomp_mult = seasonal_decompose(ts_mult, model='multiplicative', period=12)
+
+print(f"\n=== Multiplicative Decomposition ===")
+print(f"  Seasonal factors (multiplicative):")
+seasonal_factors = decomp_mult.seasonal[:12].values
+for m, v in zip(months, seasonal_factors):
+    print(f"    {m}: {v:.3f} ({'↑' if v > 1 else '↓'} {abs(v - 1) * 100:.1f}%)")
+
+# ─── Step 8: Additive vs Multiplicative — visual comparison ───
+fig, axes = plt.subplots(2, 1, figsize=(12, 6))
+
+axes[0].plot(dates, sales, color='#58a6ff', label='Additive data')
+axes[0].set_title('Additive: Seasonal swings are constant')
+axes[0].set_ylabel('Sales ($)')
+axes[0].legend()
+axes[0].grid(True, alpha=0.2)
+
+axes[1].plot(dates, sales_mult, color='#f0883e', label='Multiplicative data')
+axes[1].set_title('Multiplicative: Seasonal swings grow with level')
+axes[1].set_ylabel('Sales ($)')
+axes[1].legend()
+axes[1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_25_add_vs_mult.png', dpi=100, bbox_inches='tight')
+print("✅ Additive vs Multiplicative comparison saved as project_25_add_vs_mult.png")
+
+# ─── Step 9: Moving average for trend extraction ───
+print(f"\n=== Moving Average Smoothing ===")
+for window in [3, 6, 12]:
+    ma = ts.rolling(window=window, center=True).mean()
+    print(f"  Window={window:>2}: smoothed range = ${ma.min():,.0f} – ${ma.max():,.0f}")
+
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(dates, sales, color='#c9d1d9', alpha=0.4, label='Raw')
+for window, color in [(3, '#f85149'), (6, '#3fb950'), (12, '#58a6ff')]:
+    ma = ts.rolling(window=window, center=True).mean()
+    ax.plot(dates, ma, color=color, linewidth=2, label=f'MA({window})')
+ax.set_title('Moving Average Smoothing')
+ax.set_ylabel('Sales ($)')
+ax.legend()
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_25_moving_average.png', dpi=100, bbox_inches='tight')
+print("✅ Moving average plot saved as project_25_moving_average.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Time series data has structure that cross-sectional models (Projects 1–24) ignore: trend, seasonality, and autocorrelation</li>
+        <li>Decomposition splits a series into Trend + Seasonal + Residual — each component tells a different story</li>
+        <li>Choose additive when seasonal swings are constant; multiplicative when they grow with the level</li>
+        <li>ACF reveals the autocorrelation structure — spikes at regular lags confirm seasonality</li>
+        <li>Decomposition is descriptive, not predictive — it explains the past but doesn't forecast the future</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 26</h3>
+    <ul>
+        <li>Now that we can decompose a series, the next question is: can we forecast future values?</li>
+        <li>Project 26 introduces <strong>ARIMA</strong> — a model that uses the autocorrelation structure we just discovered to make predictions</li>
+        <li>We'll learn about stationarity (which the ACF hinted at), differencing, and how to choose AR/I/MA parameters</li>
+        <li>The decomposition and ACF skills from this project are prerequisites for understanding ARIMA</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_24.html">← Project 24: PCA — Dimensionality Reduction</a>
+    <a href="project_26.html">Project 26: ARIMA Forecasting →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

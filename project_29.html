@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 29 — Survival Analysis — When Will a Machine Fail?</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 3 — Medium</span>
+<h1>Project 29: Survival Analysis — When Will a Machine Fail?</h1>
+<p>
+    <span class="tag">Survival Analysis</span>
+    <span class="tag">Kaplan-Meier</span>
+    <span class="tag">Censored Data</span>
+    <span class="tag">Log-Rank Test</span>
+    <span class="tag">Lifelines</span>
+    <span class="tag">Hazard Function</span>
+</p>
+<p class="difficulty">Difficulty: Medium &nbsp;|&nbsp; Builds on: Projects 10, 25</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a reliability engineer at a manufacturing plant with 500 industrial machines</li>
+        <li>Some machines have failed — you know exactly when. Others are still running — you only know they haven't failed YET</li>
+        <li>Management asks: "What's the probability a machine survives past 2 years? Do machines from Supplier A last longer than Supplier B?"</li>
+        <li>Standard classification (Project 10) can predict IF a machine will fail, but not WHEN</li>
+        <li>The "still running" machines are censored — dropping them wastes data; treating them as non-failures is wrong</li>
+        <li>Goal → use survival analysis to model time-to-failure while properly handling censored observations</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 10: logistic regression predicts binary outcomes — but ignores the TIME dimension</li>
+        <li>From Project 25: time series analysis respects temporal structure — survival analysis does too, but for event times</li>
+        <li>The key challenge: censored data — some machines haven't failed yet, but we can't ignore them</li>
+        <li>Use the Kaplan-Meier estimator to estimate the survival function nonparametrically</li>
+        <li>Use the log-rank test to compare survival curves between groups (e.g., Supplier A vs B)</li>
+        <li>Use the lifelines library — Python's go-to for survival analysis</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate machine failure data with censoring (some machines still running)</li>
+        <li>Fit a Kaplan-Meier survival curve — estimate P(survival > t) for any time t</li>
+        <li>Compare survival curves for different machine groups (suppliers, environments)</li>
+        <li>Apply the log-rank test to determine if group differences are statistically significant</li>
+        <li>Estimate median survival time and confidence intervals</li>
+        <li>Show why ignoring censored data gives biased results</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always account for censoring — censored observations carry information ("survived at least this long")</li>
+        <li>✅ Use Kaplan-Meier for nonparametric survival estimation — no distributional assumptions needed</li>
+        <li>✅ Plot survival curves with confidence intervals — they widen as fewer subjects remain at risk</li>
+        <li>✅ Use the log-rank test to compare groups — it's the standard test for survival curve differences</li>
+        <li>✅ Report median survival time — more intuitive than mean for skewed time-to-event data</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT drop censored observations — you lose data AND introduce bias (only failures remain)</li>
+        <li>❌ Do NOT treat censored as "no event" — a machine running for 6 months isn't the same as one that will never fail</li>
+        <li>❌ Do NOT use mean time-to-failure without accounting for censoring — it underestimates true survival</li>
+        <li>❌ Do NOT use standard regression (Project 2) for time-to-event — it ignores censoring</li>
+        <li>❌ Do NOT compare survival curves visually without a statistical test — curves can look different by chance</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Kaplan-Meier</strong> → nonparametric survival estimation — no assumptions about the failure distribution</li>
+        <li>🔹 <strong>Log-rank test</strong> → compare survival curves between two or more groups</li>
+        <li>🔹 <strong>Cox Proportional Hazards</strong> → when you have covariates (features) that affect survival — the "regression" of survival analysis</li>
+        <li>🔹 <strong>Logistic Regression (Project 10)</strong> → when you only care about IF an event happens, not WHEN</li>
+        <li>🔹 <strong>Time Series (Project 25)</strong> → when you're modeling a continuous measurement over time, not time-to-event</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When there's no censoring — if all events are observed, simpler methods work fine</li>
+        <li>🚫 When the outcome isn't time-to-event — survival analysis is for "how long until X happens"</li>
+        <li>🚫 When you need to predict a continuous value — use regression (Project 9)</li>
+        <li>🚫 When the event can happen multiple times — standard survival analysis assumes one event per subject</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Censoring — The Core Challenge</h3>
+    <ul>
+        <li>Right censoring: the subject hasn't experienced the event by the end of the study</li>
+        <li>Example: machine installed 6 months ago, still running → censored at 6 months</li>
+        <li>We know it survived AT LEAST 6 months — that's useful information</li>
+        <li>Dropping censored data biases results toward shorter survival times (only failures remain)</li>
+    </ul>
+
+    <h3>The Survival Function S(t)</h3>
+    <ul>
+        <li>S(t) = P(T > t) = probability of surviving beyond time t</li>
+        <li>S(0) = 1 (everyone starts alive), S(∞) = 0 (eventually everyone experiences the event)</li>
+        <li>S(t) is a decreasing step function — drops at each observed event time</li>
+        <li>Median survival = time t where S(t) = 0.5 — half the population has experienced the event</li>
+    </ul>
+
+    <h3>Kaplan-Meier Estimator</h3>
+    <ul>
+        <li>At each event time tᵢ: Ŝ(tᵢ) = Ŝ(tᵢ₋₁) × (1 - dᵢ/nᵢ)</li>
+        <li>dᵢ = number of events at time tᵢ, nᵢ = number at risk just before tᵢ</li>
+        <li>Censored subjects are "at risk" until their censoring time, then removed from the risk set</li>
+        <li>This is why censored data matters — they contribute to nᵢ (the denominator) until they're censored</li>
+    </ul>
+
+    <h3>The Hazard Function h(t)</h3>
+    <ul>
+        <li>h(t) = instantaneous rate of failure at time t, given survival up to t</li>
+        <li>h(t) = f(t) / S(t) where f(t) is the density of failure times</li>
+        <li>Constant hazard → exponential distribution (memoryless — machine doesn't age)</li>
+        <li>Increasing hazard → Weibull distribution (machine wears out over time)</li>
+        <li>The hazard function connects survival analysis to the concept of risk from Project 10</li>
+    </ul>
+
+    <h3>Log-Rank Test</h3>
+    <ul>
+        <li>H₀: the survival curves of two groups are identical</li>
+        <li>Compares observed vs expected events in each group at every event time</li>
+        <li>Test statistic follows a chi-squared distribution under H₀</li>
+        <li>p-value < 0.05 → the groups have significantly different survival</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Ignoring censoring</strong> — the #1 mistake; biases all estimates toward shorter survival</li>
+        <li>⚠️ <strong>Informative censoring</strong> — if censoring is related to the outcome (sicker patients drop out), KM is biased</li>
+        <li>⚠️ <strong>Small sample at late times</strong> — the survival curve becomes unreliable when few subjects remain at risk</li>
+        <li>⚠️ <strong>Comparing curves without a test</strong> — visual differences can be due to chance; always use log-rank</li>
+        <li>⚠️ <strong>Confusing survival analysis with time series</strong> — time series models continuous measurements; survival models time-to-event</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Kaplan-Meier is O(n log n) — sorting event times is the bottleneck; very fast</li>
+        <li>Log-rank test is O(n) after sorting — trivial computation</li>
+        <li>Cox Proportional Hazards is O(n × p) per iteration — scales well for moderate feature counts</li>
+        <li>For millions of subjects, lifelines handles it efficiently with vectorized operations</li>
+        <li>Memory is rarely an issue — survival data is compact (time, event indicator, covariates)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Kaplan-Meier curves are highly intuitive — "70% of machines survive past 1 year"</li>
+        <li>✅ Median survival time is easy to communicate — "half the machines fail by month 18"</li>
+        <li>✅ Comparing curves visually is powerful — stakeholders immediately see which group lasts longer</li>
+        <li>✅ Confidence intervals show uncertainty — wider bands mean fewer observations</li>
+        <li>⚠️ Hazard ratios (from Cox models) require more explanation — "1.5x the risk" is less intuitive than survival curves</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from lifelines import KaplanMeierFitter, CoxPHFitter
+from lifelines.statistics import logrank_test
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Generate machine failure data with censoring ───
+np.random.seed(42)
+n_machines = 500
+
+# Two suppliers with different reliability
+supplier = np.random.choice(['A', 'B'], size=n_machines, p=[0.6, 0.4])
+# Supplier A: Weibull with shape=2 (increasing hazard), scale=24 months
+# Supplier B: Weibull with shape=2, scale=18 months (fails sooner)
+true_failure_time = np.where(
+    supplier == 'A',
+    np.random.weibull(2, n_machines) * 24,
+    np.random.weibull(2, n_machines) * 18
+)
+
+# Censoring: study ends at 36 months, some machines installed later
+study_duration = 36
+install_time = np.random.uniform(0, 24, n_machines)  # installed between month 0-24
+observation_time = study_duration - install_time  # max observable time
+
+# Observed time = min(true failure, observation window)
+observed_time = np.minimum(true_failure_time, observation_time)
+event_observed = (true_failure_time <= observation_time).astype(int)
+
+df = pd.DataFrame({
+    'duration': observed_time,
+    'event': event_observed,
+    'supplier': supplier,
+    'install_month': install_time.astype(int),
+    'operating_temp': np.random.normal(70, 10, n_machines),  # Fahrenheit
+    'maintenance_score': np.random.uniform(1, 10, n_machines)
+})
+
+print("=== Machine Failure Dataset ===")
+print(f"  Total machines: {n_machines}")
+print(f"  Failed (event=1): {event_observed.sum()} ({event_observed.mean():.1%})")
+print(f"  Censored (event=0): {(1 - event_observed).sum()} ({1 - event_observed.mean():.1%})")
+print(f"  Supplier A: {(supplier == 'A').sum()}, Supplier B: {(supplier == 'B').sum()}")
+print(f"  Observed time range: {observed_time.min():.1f} – {observed_time.max():.1f} months")
+
+# ─── Step 2: Why ignoring censoring is wrong ───
+print("\n=== Why Censoring Matters ===")
+# Wrong: mean of observed times (ignores censoring)
+naive_mean = observed_time.mean()
+# Wrong: mean of only failed machines
+failed_only_mean = observed_time[event_observed == 1].mean()
+print(f"  Naive mean (all observed times):  {naive_mean:.1f} months — BIASED")
+print(f"  Failed-only mean:                 {failed_only_mean:.1f} months — BIASED (ignores survivors)")
+print(f"  → Both underestimate true survival because they mishandle censored data")
+
+# ─── Step 3: Kaplan-Meier survival curve ───
+kmf = KaplanMeierFitter()
+kmf.fit(df['duration'], event_observed=df['event'], label='All Machines')
+
+print(f"\n=== Kaplan-Meier Estimates ===")
+print(f"  Median survival: {kmf.median_survival_time_:.1f} months")
+for t in [6, 12, 18, 24, 30]:
+    surv = kmf.predict(t)
+    print(f"  P(survive > {t:>2} months): {surv:.1%}")
+
+fig, ax = plt.subplots(figsize=(10, 6))
+kmf.plot_survival_function(ax=ax, color='#58a6ff', linewidth=2)
+ax.set_title('Kaplan-Meier Survival Curve — All Machines')
+ax.set_xlabel('Time (months)')
+ax.set_ylabel('Survival Probability')
+ax.grid(True, alpha=0.2)
+ax.axhline(y=0.5, color='#f85149', linestyle='--', alpha=0.5, label='50% survival')
+ax.legend()
+plt.tight_layout()
+plt.savefig('project_29_km_overall.png', dpi=100, bbox_inches='tight')
+print("\n✅ Overall KM curve saved as project_29_km_overall.png")
+
+# ─── Step 4: Compare suppliers — KM by group ───
+fig, ax = plt.subplots(figsize=(10, 6))
+
+for name, color in [('A', '#3fb950'), ('B', '#f85149')]:
+    mask = df['supplier'] == name
+    kmf_group = KaplanMeierFitter()
+    kmf_group.fit(df.loc[mask, 'duration'], event_observed=df.loc[mask, 'event'],
+                  label=f'Supplier {name}')
+    kmf_group.plot_survival_function(ax=ax, color=color, linewidth=2)
+    print(f"  Supplier {name}: median survival = {kmf_group.median_survival_time_:.1f} months")
+
+ax.set_title('Survival Curves by Supplier')
+ax.set_xlabel('Time (months)')
+ax.set_ylabel('Survival Probability')
+ax.grid(True, alpha=0.2)
+ax.legend()
+plt.tight_layout()
+plt.savefig('project_29_km_by_supplier.png', dpi=100, bbox_inches='tight')
+print("✅ KM by supplier saved as project_29_km_by_supplier.png")
+
+# ─── Step 5: Log-rank test — is the difference significant? ───
+mask_a = df['supplier'] == 'A'
+mask_b = df['supplier'] == 'B'
+
+result = logrank_test(
+    df.loc[mask_a, 'duration'], df.loc[mask_b, 'duration'],
+    event_observed_A=df.loc[mask_a, 'event'],
+    event_observed_B=df.loc[mask_b, 'event']
+)
+
+print(f"\n=== Log-Rank Test: Supplier A vs B ===")
+print(f"  Test statistic: {result.test_statistic:.4f}")
+print(f"  p-value: {result.p_value:.6f}")
+print(f"  Significant: {'YES ✅' if result.p_value < 0.05 else 'NO ❌'} (α=0.05)")
+
+# ─── Step 6: Cox Proportional Hazards — survival regression ───
+print(f"\n=== Cox Proportional Hazards Model ===")
+df_cox = df.copy()
+df_cox['supplier_B'] = (df_cox['supplier'] == 'B').astype(int)
+df_cox = df_cox.drop(columns=['supplier', 'install_month'])
+
+cph = CoxPHFitter()
+cph.fit(df_cox, duration_col='duration', event_col='event')
+cph.print_summary()
+
+print(f"\nInterpretation:")
+for col in ['supplier_B', 'operating_temp', 'maintenance_score']:
+    hr = np.exp(cph.params_[col])
+    direction = "increases" if hr > 1 else "decreases"
+    print(f"  {col}: hazard ratio = {hr:.3f} — "
+          f"a 1-unit increase {direction} failure risk by {abs(hr - 1) * 100:.1f}%")
+
+# ─── Step 7: Survival curves from Cox model ───
+fig, ax = plt.subplots(figsize=(10, 6))
+cph.plot(ax=ax)
+ax.set_title('Cox PH — Covariate Effects (Hazard Ratios)')
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_29_cox_coefficients.png', dpi=100, bbox_inches='tight')
+print("\n✅ Cox coefficients saved as project_29_cox_coefficients.png")
+
+# ─── Step 8: Predicted survival for specific machines ───
+print(f"\n=== Predicted Survival for Specific Machines ===")
+new_machines = pd.DataFrame({
+    'supplier_B': [0, 1, 0],
+    'operating_temp': [65, 80, 70],
+    'maintenance_score': [8, 3, 5]
+})
+
+fig, ax = plt.subplots(figsize=(10, 6))
+colors = ['#3fb950', '#f85149', '#58a6ff']
+labels = ['Good (A, cool, maintained)', 'Bad (B, hot, neglected)', 'Average']
+
+for i in range(len(new_machines)):
+    surv_func = cph.predict_survival_function(new_machines.iloc[[i]])
+    ax.plot(surv_func.index, surv_func.values, color=colors[i],
+            linewidth=2, label=labels[i])
+    median_t = surv_func.index[surv_func.values.flatten() <= 0.5]
+    if len(median_t) > 0:
+        print(f"  {labels[i]}: median survival = {median_t[0]:.1f} months")
+    else:
+        print(f"  {labels[i]}: median survival > {surv_func.index[-1]:.0f} months")
+
+ax.set_title('Predicted Survival Curves for Specific Machines')
+ax.set_xlabel('Time (months)')
+ax.set_ylabel('Survival Probability')
+ax.axhline(y=0.5, color='#c9d1d9', linestyle='--', alpha=0.3)
+ax.legend()
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.savefig('project_29_predicted_survival.png', dpi=100, bbox_inches='tight')
+print("✅ Predicted survival curves saved as project_29_predicted_survival.png")
+
+# ─── Step 9: Number at risk table ───
+print(f"\n=== Number at Risk Over Time ===")
+for t in [0, 6, 12, 18, 24, 30, 36]:
+    at_risk = (df['duration'] >= t).sum()
+    events_by_t = ((df['duration'] <= t) & (df['event'] == 1)).sum()
+    censored_by_t = ((df['duration'] <= t) & (df['event'] == 0)).sum()
+    print(f"  t={t:>2} months: at risk={at_risk:>3}, "
+          f"failed={events_by_t:>3}, censored={censored_by_t:>3}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Survival analysis models WHEN an event happens, not just IF — it answers "how long until failure?"</li>
+        <li>Censored data is the key challenge — some subjects haven't experienced the event yet, but they still carry information</li>
+        <li>Kaplan-Meier estimates the survival function nonparametrically — no distributional assumptions</li>
+        <li>The log-rank test compares survival curves between groups — the survival equivalent of a t-test</li>
+        <li>Cox Proportional Hazards adds covariates — the "regression" of survival analysis</li>
+        <li>Never ignore censoring — it biases all estimates toward shorter survival times</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 30</h3>
+    <ul>
+        <li>Throughout these projects, we've used frequentist statistics — p-values, confidence intervals, hypothesis tests</li>
+        <li>Project 30 introduces <strong>Bayesian thinking</strong> — a fundamentally different approach to uncertainty</li>
+        <li>Instead of "reject or fail to reject," Bayesian methods give you a probability distribution over the answer</li>
+        <li>We'll apply this to A/B testing — combining prior beliefs with observed data to make decisions</li>
+        <li>This connects to the logistic regression foundation from Project 6 and the cross-validation rigor from Project 15</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_28.html">← Project 28: Naive Bayes NLP</a>
+    <a href="project_30.html">Project 30: Bayesian A/B Testing →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

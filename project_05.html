@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 5 — Estimating Ice Cream Sales From Temperature</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --heading: #58a6ff;
+            --accent: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --purple: #bc8cff;
+            --code-bg: #0d1117;
+            --link: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 1 — Very Easy</span>
+<h1>Project 5: Estimating Ice Cream Sales From Temperature</h1>
+<p>
+    <span class="tag">Correlation</span>
+    <span class="tag">Pearson r</span>
+    <span class="tag">R² score</span>
+    <span class="tag">residuals</span>
+    <span class="tag">underfitting</span>
+</p>
+<p class="difficulty">Difficulty: Very Easy &nbsp;|&nbsp; Builds on: Projects 2, 3</p>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You run a small ice cream shop and want to predict daily sales based on temperature</li>
+        <li>You have 60 days of data: daily high temperature (°F) and number of ice cream units sold</li>
+        <li>Before building a model, you want to know: <strong>how strongly are temperature and sales related?</strong></li>
+        <li>In Projects 2-3 we jumped straight to fitting a line — now we step back and measure the relationship FIRST</li>
+        <li>Goal → learn correlation (Pearson r), R² score, and what "underfitting" looks like</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Before modeling, compute the <strong>Pearson correlation coefficient (r)</strong> between temperature and sales</li>
+        <li>r tells you the strength and direction of the LINEAR relationship
+            <ul>
+                <li>r = +1 → perfect positive linear relationship</li>
+                <li>r = 0 → no linear relationship</li>
+                <li>r = -1 → perfect negative linear relationship</li>
+            </ul>
+        </li>
+        <li>Fit a linear regression (Project 2 skill) and compute R²</li>
+        <li>R² = proportion of variance in sales explained by temperature</li>
+        <li>Analyze residuals (Project 3 skill) to check if the linear model is sufficient</li>
+        <li>Introduce the concept of underfitting: when the model is too simple for the data</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic ice cream data with a slightly nonlinear relationship</li>
+        <li>Compute Pearson r manually and with numpy</li>
+        <li>Fit linear regression and get R²</li>
+        <li>Plot residuals — look for the curve that signals underfitting</li>
+        <li>Compare R² with the residual pattern — high R² doesn't always mean good fit</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always compute correlation BEFORE building a model — it's a sanity check</li>
+        <li>✅ Understand that r measures LINEAR association only — a curved relationship can have r ≈ 0</li>
+        <li>✅ Use R² to quantify how much variance the model explains (0% to 100%)</li>
+        <li>✅ Plot the scatter plot first — your eyes catch patterns that numbers miss</li>
+        <li>✅ Check residuals even when R² looks good — residual patterns reveal model inadequacy</li>
+        <li>✅ Recognize underfitting: the model is too simple, residuals show a systematic pattern</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT assume high correlation means causation — ice cream sales and drowning deaths are correlated (both driven by summer)</li>
+        <li>❌ Do NOT use Pearson r for nonlinear relationships — it only measures linear association</li>
+        <li>❌ Do NOT treat R² as the only quality metric — always pair it with residual analysis (Project 3)</li>
+        <li>❌ Do NOT ignore underfitting — a model that's too simple leaves predictable patterns in the residuals</li>
+        <li>❌ Do NOT confuse r and R² — for simple regression R² = r², but this breaks for multiple regression (Project 9)</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Pearson r</strong> → quick check of linear association between two continuous variables</li>
+        <li>🔹 <strong>R² score</strong> → after fitting a regression model, to quantify explained variance</li>
+        <li>🔹 <strong>Scatter plot</strong> → always first — before computing any statistic</li>
+        <li>🔹 <strong>Residual plot</strong> → after fitting, to check if the model form is appropriate (Project 3)</li>
+        <li>🔹 <strong>Spearman rank correlation</strong> → when the relationship is monotonic but not linear (mentioned here, used later)</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Pearson r is meaningless for U-shaped or circular relationships</li>
+        <li>🚫 R² can be misleadingly high even when the model is wrong (e.g., fitting a line to a curve that happens to trend upward)</li>
+        <li>🚫 Correlation doesn't work well with categorical variables — need different measures</li>
+        <li>🚫 A single outlier can dramatically change r — always check for outliers visually</li>
+        <li>🚫 R² doesn't tell you if predictions are accurate in absolute terms — only relative to the variance</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Pearson Correlation Coefficient (r)</h3>
+    <ul>
+        <li>Formula: <code>r = Σ((xᵢ - x̄)(yᵢ - ȳ)) / √(Σ(xᵢ - x̄)² × Σ(yᵢ - ȳ)²)</code></li>
+        <li>Numerator = covariance (how x and y move together)</li>
+        <li>Denominator = product of standard deviations (normalizes to [-1, +1])</li>
+        <li>r is dimensionless — doesn't depend on the units of x or y</li>
+    </ul>
+
+    <h3>R² — Coefficient of Determination</h3>
+    <ul>
+        <li><code>R² = 1 - (SS_res / SS_tot)</code></li>
+        <li><code>SS_res = Σ(yᵢ - ŷᵢ)²</code> → residual sum of squares (error left after modeling)</li>
+        <li><code>SS_tot = Σ(yᵢ - ȳ)²</code> → total sum of squares (total variance in y)</li>
+        <li>R² = 0.85 means the model explains 85% of the variance in y</li>
+        <li>For simple linear regression: R² = r² (the square of Pearson r)</li>
+    </ul>
+
+    <h3>Underfitting — The Model Is Too Simple</h3>
+    <ul>
+        <li>If the true relationship is curved but you fit a straight line → underfitting</li>
+        <li>Symptoms: residuals show a systematic pattern (e.g., U-shape)</li>
+        <li>R² might still be decent (e.g., 0.75) but the model is missing structure</li>
+        <li>Fix: use a more flexible model (polynomial regression → Project 20)</li>
+        <li>Underfitting = high bias, low variance (Project 8 will formalize this)</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Anscombe's quartet</strong> — four datasets with identical r and R² but wildly different patterns → always plot</li>
+        <li>⚠️ <strong>Outlier sensitivity</strong> — one extreme point can push r from 0.3 to 0.9</li>
+        <li>⚠️ <strong>Confusing r with R²</strong> — r = 0.7 means R² = 0.49, so only 49% of variance is explained</li>
+        <li>⚠️ <strong>Ignoring nonlinearity</strong> — a strong curved relationship can have r ≈ 0</li>
+        <li>⚠️ <strong>Ecological fallacy</strong> — correlation at group level doesn't imply correlation at individual level</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Pearson r computation is O(n) — handles millions of rows instantly</li>
+        <li>R² computation is O(n) after model fitting</li>
+        <li>For many features, computing pairwise correlations → O(n × p²) where p = number of features</li>
+        <li>Correlation matrix visualization (heatmap) becomes useful with many features (Project 9)</li>
+        <li>These concepts are lightweight — the real cost is in the model fitting, not the diagnostics</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ r is intuitive: "temperature and sales have a strong positive relationship (r = 0.88)"</li>
+        <li>✅ R² is intuitive: "temperature explains 77% of the variation in sales"</li>
+        <li>✅ Both are single numbers — easy to communicate to stakeholders</li>
+        <li>✅ Scatter plots make the relationship visible to anyone</li>
+        <li>⚠️ r and R² don't tell you the DIRECTION of causation — only association</li>
+        <li>⚠️ Underfitting is harder to explain to non-technical people — residual plots help</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic ice cream data (slightly nonlinear) ───
+np.random.seed(42)
+temperature = np.random.uniform(55, 100, size=60)  # °F
+# True relationship: slightly quadratic (sales accelerate at high temps)
+sales = 0.05 * (temperature - 50) ** 2 + 2 * temperature - 80 + np.random.normal(0, 15, 60)
+sales = np.maximum(sales, 0)  # no negative sales
+
+print("=== Sample Data (first 8 days) ===")
+for i in range(8):
+    print(f"  Day {i+1}: Temp={temperature[i]:.1f}°F  Sales={sales[i]:.0f} units")
+
+# ─── Step 2: Compute Pearson r ───
+# Manual calculation
+x_mean, y_mean = temperature.mean(), sales.mean()
+numerator = np.sum((temperature - x_mean) * (sales - y_mean))
+denominator = np.sqrt(np.sum((temperature - x_mean)**2) * np.sum((sales - y_mean)**2))
+r_manual = numerator / denominator
+
+# numpy shortcut
+r_numpy = np.corrcoef(temperature, sales)[0, 1]
+
+print(f"\n=== Pearson Correlation ===")
+print(f"  r (manual): {r_manual:.4f}")
+print(f"  r (numpy):  {r_numpy:.4f}")
+print(f"  Interpretation: {'Strong' if abs(r_numpy) > 0.7 else 'Moderate' if abs(r_numpy) > 0.4 else 'Weak'} "
+      f"{'positive' if r_numpy > 0 else 'negative'} linear relationship")
+
+# ─── Step 3: Train/Test Split + Linear Regression ───
+X_train, y_train = temperature[:42], sales[:42]
+X_test, y_test = temperature[42:], sales[42:]
+
+model = LinearRegression()
+model.fit(X_train.reshape(-1, 1), y_train)
+
+y_train_pred = model.predict(X_train.reshape(-1, 1))
+y_test_pred = model.predict(X_test.reshape(-1, 1))
+
+# ─── Step 4: R² Score ───
+r2_train = r2_score(y_train, y_train_pred)
+r2_test = r2_score(y_test, y_test_pred)
+rmse_test = np.sqrt(mean_squared_error(y_test, y_test_pred))
+
+print(f"\n=== Model Performance ===")
+print(f"  R² (train): {r2_train:.4f} → model explains {r2_train*100:.1f}% of training variance")
+print(f"  R² (test):  {r2_test:.4f} → model explains {r2_test*100:.1f}% of test variance")
+print(f"  Test RMSE:  {rmse_test:.1f} units")
+print(f"  r² check:   {r_numpy**2:.4f} (should ≈ R² for simple regression)")
+
+# ─── Step 5: Residual Analysis — Detecting Underfitting ───
+train_residuals = y_train - y_train_pred
+test_residuals = y_test - y_test_pred
+
+print(f"\n=== Residual Analysis ===")
+print(f"  Mean residual (train): {np.mean(train_residuals):.2f} (should be ~0)")
+print(f"  Std residual (train):  {np.std(train_residuals):.2f}")
+
+# Check for pattern: sort by temperature and see if residuals trend
+sorted_idx = np.argsort(X_train)
+sorted_resid = train_residuals[sorted_idx]
+first_third = sorted_resid[:14].mean()
+middle_third = sorted_resid[14:28].mean()
+last_third = sorted_resid[28:].mean()
+print(f"\n  Residual means by temperature tercile:")
+print(f"    Low temps:  {first_third:+.1f}")
+print(f"    Mid temps:  {middle_third:+.1f}")
+print(f"    High temps: {last_third:+.1f}")
+print(f"  → {'Pattern detected! Model may be underfitting.' if abs(last_third - middle_third) > 5 else 'No strong pattern.'}")
+
+# ─── Step 6: Visualization ───
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+# Scatter + fit
+ax1 = axes[0]
+ax1.scatter(temperature, sales, color='#58a6ff', alpha=0.6)
+x_line = np.linspace(50, 105, 100)
+ax1.plot(x_line, model.predict(x_line.reshape(-1, 1)), color='#3fb950', linewidth=2)
+ax1.set_xlabel('Temperature (°F)')
+ax1.set_ylabel('Ice Cream Sales')
+ax1.set_title(f'Linear Fit (R²={r2_train:.3f}, r={r_numpy:.3f})')
+ax1.grid(True, alpha=0.2)
+
+# Residuals vs predicted
+ax2 = axes[1]
+ax2.scatter(y_train_pred, train_residuals, color='#58a6ff', alpha=0.6)
+ax2.axhline(y=0, color='#f85149', linestyle='--')
+ax2.set_xlabel('Predicted Sales')
+ax2.set_ylabel('Residual')
+ax2.set_title('Residuals — Look for Patterns!')
+ax2.grid(True, alpha=0.2)
+
+# Predicted vs Actual
+ax3 = axes[2]
+ax3.scatter(y_test_pred, y_test, color='#f0883e', alpha=0.7)
+lims = [min(y_test.min(), y_test_pred.min()), max(y_test.max(), y_test_pred.max())]
+ax3.plot(lims, lims, color='#3fb950', linestyle='--', linewidth=2)
+ax3.set_xlabel('Predicted')
+ax3.set_ylabel('Actual')
+ax3.set_title('Predicted vs Actual')
+ax3.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_05_correlation.png', dpi=100, bbox_inches='tight')
+print("\n✅ Plots saved as project_05_correlation.png")
+</code></pre>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Pearson r measures the strength and direction of LINEAR association (-1 to +1)</li>
+        <li>R² tells you what fraction of the target's variance the model explains</li>
+        <li>Always plot before computing — Anscombe's quartet proves numbers can lie</li>
+        <li>Underfitting = model too simple → systematic residual patterns</li>
+        <li>Correlation ≠ causation — the most important statistical lesson</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 6</h3>
+    <ul>
+        <li>Projects 2-5 focused on regression (predicting numbers)</li>
+        <li>Project 4 used a threshold for classification — but what if we want <strong>probabilities</strong> instead of hard 0/1?</li>
+        <li>Project 6 introduces <strong>Logistic Regression</strong> — the sigmoid function turns any number into a probability</li>
+        <li>Instead of "spam or not-spam", we'll predict "80% chance of buying" — much more useful</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_04.html">← Project 4: Classifying Spam vs Not-Spam</a>
+    <a href="project_06.html">Project 6: Will a Customer Buy? →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

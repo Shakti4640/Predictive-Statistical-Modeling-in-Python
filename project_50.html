@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 50 — Transfer Learning on Tabular Data — Embeddings From Pre-Trained Models</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 50: Transfer Learning on Tabular Data — Embeddings From Pre-Trained Models</h1>
+<p>
+    <span class="tag">Entity Embeddings</span>
+    <span class="tag">Pre-Training</span>
+    <span class="tag">Fine-Tuning</span>
+    <span class="tag">Categorical Embeddings</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 48, 49</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A retail company launches a new product category (organic snacks) with only 500 sales records</li>
+        <li>They have 50,000 records from existing categories (beverages, dairy, frozen foods) with the same features: store, region, day-of-week, promotion type, shelf position</li>
+        <li>Training a model on 500 rows leads to severe overfitting — especially for high-cardinality categorical features like store ID (200 stores)</li>
+        <li>One-hot encoding store ID creates 200 sparse columns from just 500 rows — the model can't learn meaningful patterns</li>
+        <li>Goal → learn dense entity embeddings for categorical features on the large dataset, then transfer them to the small dataset</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 48: TabNet uses attention on features — but entity embeddings are a simpler, more targeted approach</li>
+        <li>From Project 49: we learned how neural networks can capture complex patterns — embeddings are learned representations</li>
+        <li>Entity embeddings map each categorical value to a dense vector — "Store 42" becomes [0.3, -0.1, 0.8] instead of a 200-dim one-hot</li>
+        <li>Pre-train embeddings on the large dataset where there's enough data to learn good representations</li>
+        <li>Transfer the learned embeddings to the small dataset — the model starts with knowledge instead of random weights</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate a synthetic retail dataset: 50K rows (large) and 500 rows (small) with shared categorical features</li>
+        <li>Implement entity embeddings using numpy — lookup tables that map category indices to dense vectors</li>
+        <li>Train a neural network with embeddings on the large dataset</li>
+        <li>Transfer the learned embeddings to a new model for the small dataset</li>
+        <li>Compare: (a) one-hot encoding, (b) random embeddings, (c) pre-trained embeddings on the small dataset</li>
+        <li>Visualize embedding spaces to show that similar categories cluster together</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Choose embedding dimensions based on cardinality — rule of thumb: min(50, cardinality // 2)</li>
+        <li>✅ Freeze embeddings initially when fine-tuning on small data — prevents catastrophic forgetting</li>
+        <li>✅ Validate that source and target tasks share the same categorical features and values</li>
+        <li>✅ Combine embeddings with numerical features — concatenate embedded categoricals with scaled numericals</li>
+        <li>✅ Visualize embeddings with t-SNE/PCA — verify that semantically similar categories are close</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use embeddings for low-cardinality features (< 5 categories) — one-hot is simpler and sufficient</li>
+        <li>❌ Do NOT transfer embeddings between unrelated domains — store embeddings from retail won't help in healthcare</li>
+        <li>❌ Do NOT use embedding dimensions larger than cardinality — wastes parameters and overfits</li>
+        <li>❌ Do NOT skip handling unseen categories — new stores in the target data need a default embedding</li>
+        <li>❌ Do NOT fine-tune all layers at once on small data — unfreeze gradually to prevent overfitting</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Entity Embeddings + Transfer</strong> → high-cardinality categoricals, small target dataset, related source domain</li>
+        <li>🔹 <strong>One-Hot Encoding</strong> → low cardinality (< 10), enough data, tree-based models</li>
+        <li>🔹 <strong>Target Encoding (Project 41)</strong> → medium cardinality, when you want a single numeric feature per category</li>
+        <li>🔹 <strong>TabNet (Project 48)</strong> → when you want end-to-end feature selection with deep learning</li>
+        <li>🔹 <strong>Few-shot learning</strong> → when target data is extremely small (< 50 samples)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When source and target domains are unrelated — embeddings won't transfer meaningful knowledge</li>
+        <li>🚫 When the target dataset is large enough — direct training works fine without transfer</li>
+        <li>🚫 When all features are numerical — embeddings are specifically for categorical features</li>
+        <li>🚫 When using tree-based models — they handle categoricals natively; embeddings add unnecessary complexity</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Entity Embeddings</h3>
+    <ul>
+        <li>Each categorical feature gets an embedding matrix: E ∈ ℝ^(cardinality × embedding_dim)</li>
+        <li>Lookup: for category index i, the embedding is E[i] — a dense vector</li>
+        <li>During training, E is updated via backpropagation — the network learns which categories are similar</li>
+        <li>After training, similar categories have similar embeddings (e.g., nearby stores cluster together)</li>
+    </ul>
+
+    <h3>Pre-Training Phase (Large Dataset)</h3>
+    <ul>
+        <li>Train a neural network: [embeddings + numerical] → hidden layers → prediction</li>
+        <li>The embedding matrices learn rich representations from 50K examples</li>
+        <li>Store 42 might learn embedding [0.3, -0.1, 0.8] meaning "urban, high-traffic, weekend-heavy"</li>
+        <li>These representations capture relationships that one-hot encoding misses entirely</li>
+    </ul>
+
+    <h3>Transfer Phase (Small Dataset)</h3>
+    <ul>
+        <li>Initialize the new model's embedding matrices with the pre-trained values</li>
+        <li>Freeze embeddings (don't update during training) — prevents overfitting on 500 rows</li>
+        <li>Train only the downstream layers on the small dataset</li>
+        <li>Optionally: unfreeze embeddings with a very small learning rate for fine-tuning</li>
+    </ul>
+
+    <h3>Why This Works</h3>
+    <ul>
+        <li>Embeddings capture general knowledge about categories — "Store 42 is similar to Store 17"</li>
+        <li>This knowledge transfers across tasks — store similarity is the same whether predicting snacks or beverages</li>
+        <li>The small dataset only needs to learn the task-specific mapping, not the category representations</li>
+        <li>Reduces effective number of parameters — from 200 one-hot dims to 8 embedding dims per store</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Catastrophic forgetting</strong> — fine-tuning too aggressively destroys pre-trained knowledge; freeze or use small LR</li>
+        <li>⚠️ <strong>Domain mismatch</strong> — if source and target distributions differ too much, transfer hurts performance</li>
+        <li>⚠️ <strong>Unseen categories</strong> — new categories in target data have no pre-trained embedding; use mean embedding as default</li>
+        <li>⚠️ <strong>Embedding dimension too large</strong> — overfits on rare categories; keep dimensions small</li>
+        <li>⚠️ <strong>Ignoring numerical features</strong> — embeddings only help categoricals; numerical features still need standard preprocessing</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Embedding lookup is O(1) per sample — much faster than one-hot matrix multiplication</li>
+        <li>Memory: O(cardinality × embedding_dim) per feature — manageable even for millions of categories</li>
+        <li>Pre-training is a one-time cost — embeddings can be reused across many downstream tasks</li>
+        <li>For very high cardinality (>1M): use hashing tricks or frequency-based pruning</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Embedding visualization reveals category relationships — PCA/t-SNE shows clusters of similar stores</li>
+        <li>✅ Embedding distances are meaningful — cosine similarity between store embeddings reflects actual similarity</li>
+        <li>✅ Dimension analysis: each embedding dimension may capture an interpretable concept (urban vs rural, size, etc.)</li>
+        <li>⚠️ Individual embedding values are not directly interpretable — need visualization tools</li>
+        <li>⚠️ Transfer success depends on domain overlap — hard to predict a priori if transfer will help</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.linear_model import Ridge
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate synthetic retail datasets ───
+n_stores = 200
+n_regions = 10
+n_dow = 7        # day of week
+n_promos = 5
+n_shelves = 4
+
+def generate_retail_data(n_samples, category_effect=0):
+    """Generate retail sales data with categorical and numerical features."""
+    store_id = np.random.randint(0, n_stores, n_samples)
+    region_id = np.random.randint(0, n_regions, n_samples)
+    dow = np.random.randint(0, n_dow, n_samples)
+    promo_type = np.random.randint(0, n_promos, n_samples)
+    shelf_pos = np.random.randint(0, n_shelves, n_samples)
+
+    # Numerical features
+    price = np.random.uniform(2, 20, n_samples)
+    temperature = np.random.normal(70, 15, n_samples)
+
+    # True store effects (some stores sell more)
+    store_effects = np.sin(np.arange(n_stores) * 0.1) * 50 + np.random.randn(n_stores) * 10
+    region_effects = np.array([20, -10, 30, 5, -5, 15, -20, 10, 25, -15])
+    dow_effects = np.array([0, -5, -3, 0, 10, 25, 20])  # Weekend boost
+    promo_effects = np.array([0, 15, 25, 10, 30])
+    shelf_effects = np.array([0, 5, 10, -5])
+
+    # Sales = base + effects + interactions + noise
+    sales = (100 + category_effect
+             + store_effects[store_id]
+             + region_effects[region_id]
+             + dow_effects[dow]
+             + promo_effects[promo_type]
+             + shelf_effects[shelf_pos]
+             - 2 * price
+             + 0.3 * temperature
+             + np.random.normal(0, 15, n_samples))
+
+    sales = np.maximum(sales, 10)  # Floor
+
+    return {
+        'store_id': store_id, 'region_id': region_id, 'dow': dow,
+        'promo_type': promo_type, 'shelf_pos': shelf_pos,
+        'price': price, 'temperature': temperature, 'sales': sales
+    }
+
+# Large dataset (existing categories: beverages, dairy, frozen)
+large_data = generate_retail_data(50000, category_effect=0)
+# Small dataset (new category: organic snacks)
+small_data = generate_retail_data(500, category_effect=20)
+
+print("=== Retail Transfer Learning Dataset ===")
+print(f"  Large dataset (source): {len(large_data['sales'])} samples")
+print(f"  Small dataset (target): {len(small_data['sales'])} samples")
+print(f"  Stores: {n_stores}, Regions: {n_regions}")
+print(f"  Source sales range: [{large_data['sales'].min():.0f}, {large_data['sales'].max():.0f}]")
+print(f"  Target sales range: [{small_data['sales'].min():.0f}, {small_data['sales'].max():.0f}]")
+
+# ─── Step 2: Entity embedding layer ───
+class EmbeddingLayer:
+    """Learnable embedding lookup table."""
+
+    def __init__(self, num_categories, embedding_dim):
+        self.num_categories = num_categories
+        self.embedding_dim = embedding_dim
+        self.W = np.random.randn(num_categories, embedding_dim) * 0.1
+        self._indices = None
+
+    def forward(self, indices):
+        self._indices = indices
+        return self.W[indices]  # (batch, embedding_dim)
+
+    def backward(self, d_output, lr):
+        # Only update embeddings for categories that appeared in the batch
+        for i in range(len(self._indices)):
+            self.W[self._indices[i]] -= lr * d_output[i]
+
+    def get_weights(self):
+        return self.W.copy()
+
+    def set_weights(self, weights):
+        self.W = weights.copy()
+
+# ─── Step 3: Neural network with entity embeddings ───
+class EmbeddingNetwork:
+    """Neural network with entity embeddings for categorical features."""
+
+    def __init__(self, cat_configs, num_features, hidden_dim=64, lr=0.01):
+        self.lr = lr
+        self.cat_configs = cat_configs  # [(num_categories, embedding_dim), ...]
+
+        # Create embedding layers
+        self.embeddings = [EmbeddingLayer(nc, ed) for nc, ed in cat_configs]
+
+        # Total input dim = sum of embedding dims + numerical features
+        total_emb_dim = sum(ed for _, ed in cat_configs)
+        input_dim = total_emb_dim + num_features
+
+        # Hidden layers
+        self.W1 = np.random.randn(input_dim, hidden_dim) * np.sqrt(2.0 / input_dim)
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = np.random.randn(hidden_dim, hidden_dim // 2) * np.sqrt(2.0 / hidden_dim)
+        self.b2 = np.zeros(hidden_dim // 2)
+        self.W3 = np.random.randn(hidden_dim // 2, 1) * np.sqrt(2.0 / (hidden_dim // 2))
+        self.b3 = np.zeros(1)
+
+    def forward(self, cat_features, num_features):
+        """cat_features: list of (batch,) index arrays. num_features: (batch, n_num)."""
+        # Get embeddings
+        emb_list = [emb.forward(cat) for emb, cat in zip(self.embeddings, cat_features)]
+        emb_concat = np.concatenate(emb_list, axis=1)
+
+        # Concatenate with numerical features
+        self._input = np.concatenate([emb_concat, num_features], axis=1)
+
+        # Forward through hidden layers
+        self._z1 = self._input @ self.W1 + self.b1
+        self._a1 = np.maximum(0, self._z1)  # ReLU
+        self._z2 = self._a1 @ self.W2 + self.b2
+        self._a2 = np.maximum(0, self._z2)  # ReLU
+        self._output = self._a2 @ self.W3 + self.b3
+
+        return self._output.ravel()
+
+    def backward(self, y_true, y_pred, update_embeddings=True):
+        m = len(y_true)
+        d_out = (2 * (y_pred - y_true) / m).reshape(-1, 1)
+
+        # Layer 3
+        d_W3 = self._a2.T @ d_out
+        d_b3 = np.sum(d_out, axis=0)
+        d_a2 = d_out @ self.W3.T
+
+        # Layer 2
+        d_z2 = d_a2 * (self._z2 > 0).astype(float)
+        d_W2 = self._a1.T @ d_z2
+        d_b2 = np.sum(d_z2, axis=0)
+        d_a1 = d_z2 @ self.W2.T
+
+        # Layer 1
+        d_z1 = d_a1 * (self._z1 > 0).astype(float)
+        d_W1 = self._input.T @ d_z1
+        d_b1 = np.sum(d_z1, axis=0)
+        d_input = d_z1 @ self.W1.T
+
+        # Clip gradients
+        for g in [d_W1, d_W2, d_W3]:
+            np.clip(g, -5, 5, out=g)
+
+        # Update weights
+        self.W3 -= self.lr * d_W3
+        self.b3 -= self.lr * d_b3
+        self.W2 -= self.lr * d_W2
+        self.b2 -= self.lr * d_b2
+        self.W1 -= self.lr * d_W1
+        self.b1 -= self.lr * d_b1
+
+        # Update embeddings
+        if update_embeddings:
+            offset = 0
+            for emb in self.embeddings:
+                d_emb = d_input[:, offset:offset + emb.embedding_dim]
+                emb.backward(d_emb, self.lr)
+                offset += emb.embedding_dim
+
+    def fit(self, cat_features, num_features, y, epochs=100, verbose=True):
+        losses = []
+        for epoch in range(epochs):
+            y_pred = self.forward(cat_features, num_features)
+            loss = np.mean((y - y_pred) ** 2)
+            self.backward(y, y_pred)
+            losses.append(loss)
+            if verbose and (epoch + 1) % 25 == 0:
+                rmse = np.sqrt(loss)
+                print(f"  Epoch {epoch+1:4d}: RMSE={rmse:.2f}")
+        return losses
+
+    def predict(self, cat_features, num_features):
+        return self.forward(cat_features, num_features)
+
+    def get_embedding_weights(self):
+        return [emb.get_weights() for emb in self.embeddings]
+
+    def set_embedding_weights(self, weights_list):
+        for emb, w in zip(self.embeddings, weights_list):
+            emb.set_weights(w)
+
+# ─── Step 4: Prepare data ───
+def prepare_data(data):
+    cat_features = [data['store_id'], data['region_id'], data['dow'],
+                    data['promo_type'], data['shelf_pos']]
+    num_features = np.column_stack([data['price'], data['temperature']])
+    y = data['sales']
+    return cat_features, num_features, y
+
+cat_configs = [
+    (n_stores, 8),    # store: 200 categories -> 8-dim embedding
+    (n_regions, 4),   # region: 10 categories -> 4-dim embedding
+    (n_dow, 3),       # day of week: 7 -> 3-dim
+    (n_promos, 3),    # promo: 5 -> 3-dim
+    (n_shelves, 2),   # shelf: 4 -> 2-dim
+]
+
+# Scale numerical features
+scaler_large = StandardScaler()
+scaler_small = StandardScaler()
+
+large_cat, large_num, large_y = prepare_data(large_data)
+small_cat, small_num, small_y = prepare_data(small_data)
+
+large_num = scaler_large.fit_transform(large_num)
+small_num = scaler_small.fit_transform(small_num)
+
+# Split small dataset
+indices = np.arange(len(small_y))
+train_idx, test_idx = train_test_split(indices, test_size=0.3, random_state=42)
+
+small_cat_train = [c[train_idx] for c in small_cat]
+small_cat_test = [c[test_idx] for c in small_cat]
+small_num_train = small_num[train_idx]
+small_num_test = small_num[test_idx]
+small_y_train = small_y[train_idx]
+small_y_test = small_y[test_idx]
+
+print(f"\n  Small dataset split: {len(train_idx)} train, {len(test_idx)} test")
+
+# ─── Step 5: Pre-train on large dataset ───
+print(f"\n=== Phase 1: Pre-Training on Large Dataset (50K samples) ===")
+pretrain_model = EmbeddingNetwork(cat_configs, num_features=2, hidden_dim=64, lr=0.001)
+pretrain_losses = pretrain_model.fit(large_cat, large_num, large_y, epochs=100)
+
+pretrained_embeddings = pretrain_model.get_embedding_weights()
+print(f"  Pre-trained embedding shapes: {[w.shape for w in pretrained_embeddings]}")
+
+# ─── Step 6: Approach A — One-hot encoding baseline ───
+print(f"\n=== Approach A: One-Hot Encoding on Small Dataset ===")
+def one_hot_encode(cat_features, configs):
+    encoded = []
+    for feat, (n_cat, _) in zip(cat_features, configs):
+        ohe = np.zeros((len(feat), n_cat))
+        ohe[np.arange(len(feat)), feat] = 1
+        encoded.append(ohe)
+    return np.concatenate(encoded, axis=1)
+
+ohe_train = np.concatenate([one_hot_encode(small_cat_train, cat_configs), small_num_train], axis=1)
+ohe_test = np.concatenate([one_hot_encode(small_cat_test, cat_configs), small_num_test], axis=1)
+
+ridge = Ridge(alpha=10.0)
+ridge.fit(ohe_train, small_y_train)
+y_pred_ohe = ridge.predict(ohe_test)
+rmse_ohe = np.sqrt(mean_squared_error(small_y_test, y_pred_ohe))
+r2_ohe = r2_score(small_y_test, y_pred_ohe)
+print(f"  One-Hot + Ridge: RMSE={rmse_ohe:.2f}, R²={r2_ohe:.4f}")
+print(f"  Feature dimensions: {ohe_train.shape[1]}")
+
+# ─── Step 7: Approach B — Random embeddings (no transfer) ───
+print(f"\n=== Approach B: Random Embeddings (No Transfer) ===")
+random_model = EmbeddingNetwork(cat_configs, num_features=2, hidden_dim=64, lr=0.005)
+random_losses = random_model.fit(small_cat_train, small_num_train, small_y_train, epochs=200)
+
+y_pred_random = random_model.predict(small_cat_test, small_num_test)
+rmse_random = np.sqrt(mean_squared_error(small_y_test, y_pred_random))
+r2_random = r2_score(small_y_test, y_pred_random)
+print(f"  Random Embeddings: RMSE={rmse_random:.2f}, R²={r2_random:.4f}")
+
+# ─── Step 8: Approach C — Pre-trained embeddings (transfer) ───
+print(f"\n=== Approach C: Pre-Trained Embeddings (Transfer Learning) ===")
+transfer_model = EmbeddingNetwork(cat_configs, num_features=2, hidden_dim=64, lr=0.005)
+transfer_model.set_embedding_weights(pretrained_embeddings)
+
+# Phase 1: Train with frozen embeddings
+print("  Phase 1: Frozen embeddings (50 epochs)")
+frozen_losses = []
+for epoch in range(50):
+    y_pred = transfer_model.forward(small_cat_train, small_num_train)
+    loss = np.mean((small_y_train - y_pred) ** 2)
+    transfer_model.backward(small_y_train, y_pred, update_embeddings=False)
+    frozen_losses.append(loss)
+    if (epoch + 1) % 25 == 0:
+        print(f"    Epoch {epoch+1}: RMSE={np.sqrt(loss):.2f}")
+
+# Phase 2: Fine-tune with small learning rate
+print("  Phase 2: Fine-tuning embeddings (50 epochs, lr=0.001)")
+transfer_model.lr = 0.001
+finetune_losses = []
+for epoch in range(50):
+    y_pred = transfer_model.forward(small_cat_train, small_num_train)
+    loss = np.mean((small_y_train - y_pred) ** 2)
+    transfer_model.backward(small_y_train, y_pred, update_embeddings=True)
+    finetune_losses.append(loss)
+    if (epoch + 1) % 25 == 0:
+        print(f"    Epoch {epoch+1}: RMSE={np.sqrt(loss):.2f}")
+
+transfer_losses = frozen_losses + finetune_losses
+
+y_pred_transfer = transfer_model.predict(small_cat_test, small_num_test)
+rmse_transfer = np.sqrt(mean_squared_error(small_y_test, y_pred_transfer))
+r2_transfer = r2_score(small_y_test, y_pred_transfer)
+print(f"  Transfer Learning: RMSE={rmse_transfer:.2f}, R²={r2_transfer:.4f}")
+
+# ─── Step 9: Summary comparison ───
+print(f"\n=== Final Comparison on Small Dataset (500 rows) ===")
+print(f"  {'Approach':<35} {'RMSE':>8} {'R²':>8}")
+print(f"  {'-'*53}")
+print(f"  {'One-Hot + Ridge':<35} {rmse_ohe:>8.2f} {r2_ohe:>8.4f}")
+print(f"  {'Random Embeddings (no transfer)':<35} {rmse_random:>8.2f} {r2_random:>8.4f}")
+print(f"  {'Pre-Trained Embeddings (transfer)':<35} {rmse_transfer:>8.2f} {r2_transfer:>8.4f}")
+
+improvement = (rmse_ohe - rmse_transfer) / rmse_ohe * 100
+print(f"\n  Transfer learning improvement over one-hot: {improvement:.1f}% RMSE reduction")
+
+# ─── Step 10: Embedding analysis ───
+print(f"\n=== Embedding Analysis ===")
+store_emb = transfer_model.embeddings[0].get_weights()
+print(f"  Store embedding shape: {store_emb.shape}")
+print(f"  Store embedding norm range: [{np.linalg.norm(store_emb, axis=1).min():.3f}, {np.linalg.norm(store_emb, axis=1).max():.3f}]")
+
+# Find similar stores
+from scipy.spatial.distance import cosine
+store_0_emb = store_emb[0]
+similarities = [1 - cosine(store_0_emb, store_emb[i]) for i in range(n_stores)]
+most_similar = np.argsort(similarities)[::-1][1:6]
+print(f"\n  Stores most similar to Store 0: {most_similar.tolist()}")
+print(f"  Similarities: {[f'{similarities[i]:.3f}' for i in most_similar]}")
+
+# ─── Step 11: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Training loss comparison
+ax = axes[0, 0]
+ax.plot(random_losses, color='#f0883e', linewidth=1.5, alpha=0.8, label='Random Embeddings')
+ax.plot(transfer_losses, color='#58a6ff', linewidth=1.5, label='Transfer Learning')
+ax.axvline(x=50, color='white', linestyle='--', alpha=0.3, label='Unfreeze embeddings')
+ax.set_xlabel('Epoch')
+ax.set_ylabel('MSE Loss')
+ax.set_title('Training Loss: Random vs Transfer')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Model comparison bar chart
+ax = axes[0, 1]
+approaches = ['One-Hot\n+ Ridge', 'Random\nEmbeddings', 'Pre-Trained\nEmbeddings']
+rmses = [rmse_ohe, rmse_random, rmse_transfer]
+colors = ['#f85149', '#f0883e', '#58a6ff']
+bars = ax.bar(approaches, rmses, color=colors, alpha=0.8)
+ax.set_ylabel('RMSE')
+ax.set_title('Model Comparison on Small Dataset (500 rows)')
+ax.grid(True, alpha=0.2, axis='y')
+for bar, rmse in zip(bars, rmses):
+    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
+            f'{rmse:.1f}', ha='center', va='bottom', fontsize=10, color='white')
+
+# Store embedding visualization (PCA to 2D)
+ax = axes[1, 0]
+from sklearn.decomposition import PCA
+pca = PCA(n_components=2)
+store_emb_2d = pca.fit_transform(store_emb)
+# Color by store effect (true underlying pattern)
+store_effects_true = np.sin(np.arange(n_stores) * 0.1) * 50
+scatter = ax.scatter(store_emb_2d[:, 0], store_emb_2d[:, 1],
+                     c=store_effects_true, cmap='RdYlBu_r', s=15, alpha=0.7)
+plt.colorbar(scatter, ax=ax, label='True Store Effect')
+ax.set_xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.1%} var)')
+ax.set_ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.1%} var)')
+ax.set_title('Store Embeddings (PCA) — Color = True Effect')
+ax.grid(True, alpha=0.2)
+
+# Day-of-week embeddings
+ax = axes[1, 1]
+dow_emb = transfer_model.embeddings[2].get_weights()
+dow_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+dow_pca = PCA(n_components=2)
+dow_2d = dow_pca.fit_transform(dow_emb)
+ax.scatter(dow_2d[:, 0], dow_2d[:, 1], c=['#58a6ff']*5 + ['#f0883e']*2, s=100, zorder=5)
+for i, name in enumerate(dow_names):
+    ax.annotate(name, (dow_2d[i, 0], dow_2d[i, 1]), textcoords="offset points",
+                xytext=(8, 8), fontsize=10, color='white')
+ax.set_xlabel('Embedding Dim 1')
+ax.set_ylabel('Embedding Dim 2')
+ax.set_title('Day-of-Week Embeddings (Weekdays=blue, Weekend=orange)')
+ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_50_transfer_learning.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Transfer learning analysis saved as project_50_transfer_learning.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Entity embeddings map high-cardinality categoricals to dense vectors — capturing similarity that one-hot encoding misses</li>
+        <li>Pre-training on a large related dataset learns rich category representations that transfer to small datasets</li>
+        <li>Freeze-then-fine-tune strategy prevents catastrophic forgetting — start with frozen embeddings, then unfreeze with small LR</li>
+        <li>Transfer learning on tabular data is underutilized — most practitioners default to one-hot encoding even with small data</li>
+        <li>Embedding visualization reveals learned structure — similar stores, weekend vs weekday patterns emerge automatically</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 51</h3>
+    <ul>
+        <li>We've built neural networks, attention models, LSTMs, and transfer learning — all producing point predictions</li>
+        <li>Project 51 introduces <strong>conformal prediction</strong> — a framework for distribution-free prediction intervals</li>
+        <li>Unlike Bayesian methods (Project 38, 46), conformal prediction makes no distributional assumptions</li>
+        <li>It wraps any model (including our neural networks) with guaranteed coverage probability</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_49.html">← Project 49: LSTM Time Series Forecasting</a>
+    <a href="project_51.html">Project 51: Conformal Prediction →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

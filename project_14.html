@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 14 — Finding Natural Groups in Customer Spending — K-Means Clustering</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 2 — Easy</span>
+<h1>Project 14: Finding Natural Groups in Customer Spending — K-Means Clustering</h1>
+<p>
+    <span class="tag">Unsupervised learning</span>
+    <span class="tag">K-Means</span>
+    <span class="tag">inertia</span>
+    <span class="tag">elbow method</span>
+    <span class="tag">cluster assignment</span>
+</p>
+<p class="difficulty">Difficulty: Easy &nbsp;|&nbsp; Builds on: Projects 8, 13</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work in marketing at a retail company</li>
+        <li>The CMO asks: <strong>"Can we group our customers into segments based on their spending behavior?"</strong></li>
+        <li>You have data: annual spending, purchase frequency, and average order value — but NO labels</li>
+        <li>This is fundamentally different from all previous projects — there's no "right answer" to learn from</li>
+        <li>Goal → discover natural groups (clusters) in the data without supervision</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>This is UNSUPERVISED learning — no target variable, no labels</li>
+        <li>K-Means finds K groups by minimizing the distance from each point to its cluster center</li>
+        <li>Key question: how many clusters (K)? Use the elbow method</li>
+        <li>Scale features first (Project 13) — K-Means uses distances</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic customer spending data with natural clusters</li>
+        <li>Scale features (Project 13 — required for distance-based methods)</li>
+        <li>Run K-Means for K=2 to K=10</li>
+        <li>Plot the elbow curve (inertia vs K) to find optimal K</li>
+        <li>Analyze cluster profiles — what makes each segment unique?</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Scale features before clustering — same reason as KNN (Project 11, 13)</li>
+        <li>✅ Use the elbow method to choose K — look for the "bend" in the inertia curve</li>
+        <li>✅ Profile each cluster after fitting — compute mean/median of each feature per cluster</li>
+        <li>✅ Run K-Means multiple times (n_init) — it's sensitive to initialization</li>
+        <li>✅ Visualize clusters in 2D (even if data has more dimensions — use PCA, Project 24)</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use K-Means without scaling — features on larger scales dominate</li>
+        <li>❌ Do NOT assume the elbow is always clear — sometimes there's no obvious bend</li>
+        <li>❌ Do NOT treat cluster labels as meaningful — cluster 0 vs cluster 1 is arbitrary</li>
+        <li>❌ Do NOT assume K-Means finds the "true" clusters — it finds spherical clusters only</li>
+        <li>❌ Do NOT use accuracy to evaluate clustering — there are no labels to compare against</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>K-Means</strong> → when you expect roughly spherical, equal-sized clusters</li>
+        <li>🔹 <strong>Elbow method</strong> → to choose K when you don't know the number of groups</li>
+        <li>🔹 <strong>Silhouette score</strong> → alternative to elbow method (measures cluster separation)</li>
+        <li>🔹 <strong>Cluster profiling</strong> → to give business meaning to each cluster</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 K-Means assumes spherical clusters — fails with elongated or irregular shapes</li>
+        <li>🚫 Sensitive to outliers — one extreme point can pull a centroid away</li>
+        <li>🚫 Requires specifying K in advance — doesn't discover the number of clusters automatically</li>
+        <li>🚫 For non-spherical clusters, use DBSCAN or hierarchical clustering</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The K-Means Algorithm</h3>
+    <ol>
+        <li>Randomly initialize K centroids</li>
+        <li><strong>Assign</strong>: each point goes to the nearest centroid</li>
+        <li><strong>Update</strong>: move each centroid to the mean of its assigned points</li>
+        <li>Repeat steps 2-3 until centroids stop moving (convergence)</li>
+    </ol>
+
+    <h3>Inertia (Within-Cluster Sum of Squares)</h3>
+    <ul>
+        <li><code>Inertia = Σ Σ ||xᵢ - cₖ||²</code> (sum of squared distances to nearest centroid)</li>
+        <li>Lower inertia = tighter clusters</li>
+        <li>Inertia always decreases with more K — at K=n, inertia=0 (each point is its own cluster)</li>
+        <li>The elbow is where adding more K gives diminishing returns</li>
+    </ul>
+
+    <h3>Initialization Sensitivity</h3>
+    <ul>
+        <li>Bad initialization → bad clusters (local minimum)</li>
+        <li>sklearn uses "k-means++" initialization — smart initial placement</li>
+        <li>n_init=10 (default) → runs 10 times, keeps the best result</li>
+    </ul>
+
+    <h3>Supervised vs Unsupervised — The Paradigm Shift</h3>
+    <ul>
+        <li>Supervised (Projects 1-13): given (X, y), learn f(X) → y</li>
+        <li>Unsupervised (this project): given X only, find structure in X</li>
+        <li>No "right answer" → evaluation is subjective and domain-dependent</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Not scaling</strong> — income ($100K) dominates age (30) in distance calculations</li>
+        <li>⚠️ <strong>Choosing K by gut feeling</strong> — use elbow method or silhouette score</li>
+        <li>⚠️ <strong>Interpreting cluster numbers as meaningful</strong> — cluster 0 is not "worse" than cluster 2</li>
+        <li>⚠️ <strong>Assuming clusters are real</strong> — K-Means ALWAYS finds K clusters, even in random data</li>
+        <li>⚠️ <strong>Single run</strong> — always use n_init &gt; 1 to avoid bad local minima</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>K-Means is O(n × K × d × iterations) — fast for moderate data</li>
+        <li>For very large n, use MiniBatchKMeans — processes random subsets</li>
+        <li>Memory: stores K centroids (K × d) — very compact</li>
+        <li>Scales well to millions of rows with MiniBatch variant</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Cluster centroids describe the "average" member of each group</li>
+        <li>✅ Cluster profiles are intuitive: "Cluster A = high spenders, low frequency"</li>
+        <li>✅ Marketing teams can create targeted campaigns per cluster</li>
+        <li>⚠️ Cluster boundaries are hard to explain — they're Voronoi regions in high-dimensional space</li>
+        <li>⚠️ No causal explanation — clusters describe WHAT, not WHY</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic customer data with natural clusters ───
+np.random.seed(42)
+
+# 3 natural customer segments
+# Budget shoppers: low spending, high frequency
+budget = np.column_stack([
+    np.random.normal(200, 50, 80),    # annual spending
+    np.random.normal(40, 10, 80),     # purchase frequency
+    np.random.normal(5, 1.5, 80)      # avg order value
+])
+
+# Premium shoppers: high spending, medium frequency
+premium = np.column_stack([
+    np.random.normal(2000, 400, 60),
+    np.random.normal(20, 5, 60),
+    np.random.normal(100, 20, 60)
+])
+
+# Occasional big spenders: medium spending, low frequency
+occasional = np.column_stack([
+    np.random.normal(800, 200, 60),
+    np.random.normal(5, 2, 60),
+    np.random.normal(160, 30, 60)
+])
+
+X = np.vstack([budget, premium, occasional])
+feature_names = ['annual_spending', 'purchase_freq', 'avg_order_value']
+true_labels = np.array([0]*80 + [1]*60 + [2]*60)  # for validation only
+
+# Shuffle
+idx = np.random.permutation(len(X))
+X = X[idx]
+true_labels = true_labels[idx]
+
+print(f"=== Data Summary ===")
+print(f"  Customers: {len(X)}")
+for i, name in enumerate(feature_names):
+    print(f"  {name:>20}: min={X[:, i].min():.0f}, max={X[:, i].max():.0f}")
+
+# ─── Step 2: Scale features (Project 13 — required!) ───
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# ─── Step 3: Elbow Method ───
+inertias = []
+K_range = range(2, 11)
+
+for k in K_range:
+    km = KMeans(n_clusters=k, n_init=10, random_state=42)
+    km.fit(X_scaled)
+    inertias.append(km.inertia_)
+
+print(f"\n=== Elbow Method ===")
+for k, inertia in zip(K_range, inertias):
+    bar = "█" * int(inertia / max(inertias) * 30)
+    print(f"  K={k:>2}: inertia={inertia:>8.1f} {bar}")
+
+# ─── Step 4: Fit with optimal K=3 ───
+kmeans = KMeans(n_clusters=3, n_init=10, random_state=42)
+labels = kmeans.fit_predict(X_scaled)
+
+# ─── Step 5: Cluster Profiling ───
+df = pd.DataFrame(X, columns=feature_names)
+df['cluster'] = labels
+
+print(f"\n=== Cluster Profiles ===")
+profile = df.groupby('cluster')[feature_names].mean()
+print(profile.round(1).to_string())
+
+print(f"\n=== Cluster Sizes ===")
+for c in sorted(df['cluster'].unique()):
+    n = (labels == c).sum()
+    print(f"  Cluster {c}: {n} customers ({n/len(X):.1%})")
+
+# ─── Step 6: Centroid analysis ───
+centroids_original = scaler.inverse_transform(kmeans.cluster_centers_)
+print(f"\n=== Centroids (original scale) ===")
+for i, centroid in enumerate(centroids_original):
+    print(f"  Cluster {i}: " + ", ".join(
+        f"{name}={val:.0f}" for name, val in zip(feature_names, centroid)))
+
+# ─── Step 7: Visualization ───
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Elbow plot
+axes[0].plot(list(K_range), inertias, 'o-', color='#58a6ff', linewidth=2)
+axes[0].axvline(x=3, color='#f85149', linestyle='--', label='Chosen K=3')
+axes[0].set_xlabel('Number of Clusters (K)')
+axes[0].set_ylabel('Inertia')
+axes[0].set_title('Elbow Method')
+axes[0].legend()
+axes[0].grid(True, alpha=0.2)
+
+# Cluster scatter (2D projection: spending vs frequency)
+colors = ['#58a6ff', '#3fb950', '#f0883e']
+for c in range(3):
+    mask = labels == c
+    axes[1].scatter(X[mask, 0], X[mask, 1], c=colors[c],
+                    alpha=0.6, label=f'Cluster {c}')
+axes[1].scatter(centroids_original[:, 0], centroids_original[:, 1],
+                c='#f85149', marker='X', s=200, edgecolors='white', linewidth=2,
+                label='Centroids')
+axes[1].set_xlabel('Annual Spending ($)')
+axes[1].set_ylabel('Purchase Frequency')
+axes[1].set_title('Customer Segments')
+axes[1].legend()
+axes[1].grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_14_clusters.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Plots saved as project_14_clusters.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>K-Means is unsupervised — no labels needed, discovers natural groups</li>
+        <li>The elbow method helps choose K by finding diminishing returns in inertia</li>
+        <li>Scaling is mandatory (Project 13) — K-Means uses distances</li>
+        <li>Cluster profiling gives business meaning to each segment</li>
+        <li>K-Means always finds K clusters — even in random data — validate your results</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 15</h3>
+    <ul>
+        <li>Throughout Phase 2, we've used a single train/test split for evaluation</li>
+        <li>But a single split can be lucky or unlucky — how do we get a TRUSTWORTHY score?</li>
+        <li>Project 15 introduces <strong>Cross-Validation</strong> — the gold standard for model evaluation</li>
+        <li>It uses multiple splits to get a more reliable performance estimate</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_13.html">← Project 13: Scaling and Normalizing Features</a>
+    <a href="project_15.html">Project 15: Cross-Validating a Model →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

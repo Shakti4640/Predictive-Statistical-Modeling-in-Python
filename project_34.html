@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 34 — Anomaly Detection in Server Logs — Isolation Forest</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 34: Anomaly Detection in Server Logs — Isolation Forest</h1>
+<p>
+    <span class="tag">Anomaly Detection</span>
+    <span class="tag">Isolation Forest</span>
+    <span class="tag">Contamination</span>
+    <span class="tag">One-Class SVM</span>
+    <span class="tag">Outlier Detection</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 14, 24</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a DevOps engineer monitoring 50 servers generating millions of log entries per day</li>
+        <li>Each log entry has features: response time, CPU usage, memory usage, request count, error rate</li>
+        <li>99% of entries are normal — but the 1% that are anomalous signal potential outages, attacks, or misconfigurations</li>
+        <li>You have no labeled anomalies — nobody has manually tagged which entries are "bad"</li>
+        <li>Goal → automatically detect unusual server behavior without labeled training data</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Recall from Project 14: K-Means finds clusters of similar data — but anomalies are points that don't fit any cluster</li>
+        <li>Anomaly detection is fundamentally different from classification — we model "normal" and flag deviations</li>
+        <li>Isolation Forest takes a unique approach: anomalies are easier to isolate (separate) than normal points</li>
+        <li>No labels needed — this is unsupervised, like K-Means (Project 14) and PCA (Project 24)</li>
+        <li>Compare Isolation Forest with One-Class SVM and statistical approaches to understand tradeoffs</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic server log data with injected anomalies</li>
+        <li>Train Isolation Forest on the data (without using anomaly labels)</li>
+        <li>Evaluate using the known anomaly labels — precision, recall, and the anomaly score distribution</li>
+        <li>Compare with One-Class SVM and Local Outlier Factor</li>
+        <li>Visualize the decision boundary and anomaly scores</li>
+        <li>Tune the contamination parameter and analyze its effect</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Set <code>contamination</code> to your best estimate of the anomaly rate — this controls the threshold</li>
+        <li>✅ Scale features before One-Class SVM (distance-based) — same principle as Project 13</li>
+        <li>✅ Use <code>decision_function()</code> to get continuous anomaly scores, not just binary labels</li>
+        <li>✅ Visualize anomaly score distributions — the separation between normal and anomalous scores tells you model quality</li>
+        <li>✅ Validate with domain experts — anomaly detection is subjective; what's "anomalous" depends on context</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT treat anomaly detection as binary classification — you rarely have balanced labeled data</li>
+        <li>❌ Do NOT use accuracy as a metric — with 1% anomalies, predicting "all normal" gives 99% accuracy</li>
+        <li>❌ Do NOT assume Isolation Forest needs scaling — it's tree-based and scale-invariant (unlike One-Class SVM)</li>
+        <li>❌ Do NOT set contamination=0.5 — anomalies are rare by definition; typical values are 0.01-0.1</li>
+        <li>❌ Do NOT deploy without a feedback loop — anomaly detectors need periodic retraining as "normal" evolves</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Isolation Forest</strong> → general-purpose, fast, handles high dimensions well, no scaling needed</li>
+        <li>🔹 <strong>One-Class SVM</strong> → when normal data forms a tight cluster; needs scaling; slower on large data</li>
+        <li>🔹 <strong>Local Outlier Factor (LOF)</strong> → when anomalies are defined by local density, not global isolation</li>
+        <li>🔹 <strong>Statistical methods (Z-score)</strong> → when features are univariate and approximately Gaussian</li>
+        <li>🔹 <strong>Supervised classification</strong> → when you have labeled anomalies — treat as imbalanced classification (Project 19)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you have plenty of labeled anomalies — use supervised learning with class imbalance handling (Project 19)</li>
+        <li>🚫 When "normal" behavior changes frequently — the model's definition of normal becomes stale</li>
+        <li>🚫 When anomalies are subtle and context-dependent — Isolation Forest detects global outliers, not contextual ones</li>
+        <li>🚫 When you need to explain WHY something is anomalous — Isolation Forest gives scores, not reasons</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Isolation Forest — Core Idea</h3>
+    <ul>
+        <li>Key insight: anomalies are few and different — they're easier to isolate with random splits</li>
+        <li>Build a random tree: pick a random feature, pick a random split value, partition the data</li>
+        <li>Normal points need many splits to be isolated (they're surrounded by similar points)</li>
+        <li>Anomalies need few splits to be isolated (they're far from the crowd)</li>
+        <li>The path length (number of splits to isolate a point) is the anomaly score</li>
+    </ul>
+
+    <h3>Building an Isolation Tree</h3>
+    <ul>
+        <li>Step 1: Randomly select a feature</li>
+        <li>Step 2: Randomly select a split value between the feature's min and max</li>
+        <li>Step 3: Partition data into left (≤ split) and right (> split)</li>
+        <li>Step 4: Recurse until each point is isolated or max depth is reached</li>
+        <li>Step 5: Record the path length for each point</li>
+        <li>Build many trees (forest) and average the path lengths — shorter average = more anomalous</li>
+    </ul>
+
+    <h3>Anomaly Score Normalization</h3>
+    <ul>
+        <li>Raw path length depends on dataset size — normalize using the expected path length of a BST</li>
+        <li><code>score(x) = 2^(-E[h(x)] / c(n))</code> where c(n) is the average path length of unsuccessful search in BST</li>
+        <li>Score close to 1 → anomaly (short path); score close to 0.5 → normal; score close to 0 → very normal</li>
+        <li>The <code>contamination</code> parameter sets the threshold on this score to classify as anomaly</li>
+    </ul>
+
+    <h3>One-Class SVM — Comparison</h3>
+    <ul>
+        <li>Learns a boundary around the normal data in a high-dimensional kernel space</li>
+        <li>Points outside the boundary are anomalies</li>
+        <li>Uses the RBF kernel (like SVM in classification) — sensitive to the gamma parameter</li>
+        <li>Slower than Isolation Forest: O(n² to n³) vs O(n log n)</li>
+        <li>Needs feature scaling (distance-based) — Isolation Forest doesn't (tree-based)</li>
+    </ul>
+
+    <h3>decision_function() — Continuous Scores</h3>
+    <ul>
+        <li><code>predict()</code> returns -1 (anomaly) or 1 (normal) — binary, uses the contamination threshold</li>
+        <li><code>decision_function()</code> returns continuous scores — more negative = more anomalous</li>
+        <li>Use continuous scores to rank anomalies by severity — more useful than binary labels</li>
+        <li>You can set your own threshold on decision_function scores for custom sensitivity</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Wrong contamination</strong> — too high flags normal data; too low misses real anomalies; estimate from domain knowledge</li>
+        <li>⚠️ <strong>Training on data with anomalies</strong> — Isolation Forest is somewhat robust, but heavy contamination in training data degrades performance</li>
+        <li>⚠️ <strong>High-dimensional irrelevant features</strong> — random splits on noise features dilute the signal; use PCA (Project 24) first</li>
+        <li>⚠️ <strong>Evaluating without labels</strong> — without ground truth, you can't compute precision/recall; rely on domain expert review</li>
+        <li>⚠️ <strong>Treating all anomalies equally</strong> — use decision_function scores to prioritize the most extreme anomalies</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Isolation Forest: O(n × t × log(ψ)) where t = number of trees, ψ = subsample size — very fast</li>
+        <li>Default subsample size is 256 — Isolation Forest doesn't need all data; anomalies are isolated quickly regardless</li>
+        <li>One-Class SVM: O(n²) to O(n³) — impractical for datasets over 100K rows</li>
+        <li>LOF: O(n² × k) for k neighbors — also slow on large data; use approximate nearest neighbors</li>
+        <li>For streaming data, consider incremental anomaly detection or sliding window approaches</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Anomaly scores are intuitive: "this server's behavior is in the 99th percentile of abnormality"</li>
+        <li>✅ You can inspect which features have extreme values for flagged anomalies</li>
+        <li>⚠️ Isolation Forest doesn't tell you WHY a point is anomalous — only that it's easy to isolate</li>
+        <li>⚠️ For explainability, compute feature-wise z-scores for flagged anomalies to identify the unusual dimensions</li>
+        <li>⚠️ SHAP (Project 27) can be applied to Isolation Forest but interpretation is less straightforward than for classifiers</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.svm import OneClassSVM
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Simulate server log data ───
+np.random.seed(42)
+n_normal = 5000
+n_anomaly = 100
+
+# Normal server behavior
+normal_data = np.column_stack([
+    np.random.normal(200, 30, n_normal),     # response_time_ms
+    np.random.normal(45, 10, n_normal),      # cpu_percent
+    np.random.normal(60, 8, n_normal),       # memory_percent
+    np.random.normal(500, 100, n_normal),    # requests_per_min
+    np.random.normal(0.02, 0.01, n_normal),  # error_rate
+])
+
+# Anomalous behavior (various types)
+anomaly_data = np.column_stack([
+    np.random.normal(800, 200, n_anomaly),   # high response time
+    np.random.normal(92, 5, n_anomaly),      # high CPU
+    np.random.normal(88, 5, n_anomaly),      # high memory
+    np.random.normal(50, 30, n_anomaly),     # low requests (possible outage)
+    np.random.normal(0.15, 0.05, n_anomaly), # high error rate
+])
+
+X = np.vstack([normal_data, anomaly_data])
+y_true = np.array([1] * n_normal + [-1] * n_anomaly)  # 1=normal, -1=anomaly
+
+# Shuffle
+shuffle_idx = np.random.permutation(len(X))
+X, y_true = X[shuffle_idx], y_true[shuffle_idx]
+
+feature_names = ['response_time', 'cpu_pct', 'memory_pct', 'req_per_min', 'error_rate']
+print(f"=== Server Log Dataset ===")
+print(f"  Total: {len(X)}, Normal: {n_normal}, Anomalies: {n_anomaly}")
+print(f"  Anomaly rate: {n_anomaly / len(X):.1%}")
+
+# ─── Step 2: Isolation Forest ───
+iso_forest = IsolationForest(
+    n_estimators=200, contamination=n_anomaly / len(X),
+    random_state=42, n_jobs=-1
+)
+iso_pred = iso_forest.fit_predict(X)
+iso_scores = iso_forest.decision_function(X)
+
+print(f"\n=== Isolation Forest ===")
+print(f"  Precision: {precision_score(y_true, iso_pred, pos_label=-1):.4f}")
+print(f"  Recall:    {recall_score(y_true, iso_pred, pos_label=-1):.4f}")
+print(f"  F1:        {f1_score(y_true, iso_pred, pos_label=-1):.4f}")
+
+# ─── Step 3: One-Class SVM ───
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+oc_svm = OneClassSVM(kernel='rbf', gamma='scale', nu=0.02)
+svm_pred = oc_svm.fit_predict(X_scaled)
+svm_scores = oc_svm.decision_function(X_scaled)
+
+print(f"\n=== One-Class SVM ===")
+print(f"  Precision: {precision_score(y_true, svm_pred, pos_label=-1):.4f}")
+print(f"  Recall:    {recall_score(y_true, svm_pred, pos_label=-1):.4f}")
+print(f"  F1:        {f1_score(y_true, svm_pred, pos_label=-1):.4f}")
+
+# ─── Step 4: Local Outlier Factor ───
+lof = LocalOutlierFactor(n_neighbors=20, contamination=n_anomaly / len(X))
+lof_pred = lof.fit_predict(X)
+lof_scores = lof.negative_outlier_factor_
+
+print(f"\n=== Local Outlier Factor ===")
+print(f"  Precision: {precision_score(y_true, lof_pred, pos_label=-1):.4f}")
+print(f"  Recall:    {recall_score(y_true, lof_pred, pos_label=-1):.4f}")
+print(f"  F1:        {f1_score(y_true, lof_pred, pos_label=-1):.4f}")
+
+# ─── Step 5: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Anomaly score distribution (Isolation Forest)
+ax = axes[0, 0]
+normal_scores = iso_scores[y_true == 1]
+anomaly_scores_vals = iso_scores[y_true == -1]
+ax.hist(normal_scores, bins=50, alpha=0.7, color='#3fb950', label='Normal', density=True)
+ax.hist(anomaly_scores_vals, bins=30, alpha=0.7, color='#f85149', label='Anomaly', density=True)
+ax.set_xlabel('Isolation Forest Decision Score')
+ax.set_ylabel('Density')
+ax.set_title('Anomaly Score Distribution')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# 2D scatter: response_time vs error_rate
+ax = axes[0, 1]
+normal_mask = y_true == 1
+anomaly_mask = y_true == -1
+ax.scatter(X[normal_mask, 0], X[normal_mask, 4], c='#3fb950', alpha=0.3, s=10, label='Normal')
+ax.scatter(X[anomaly_mask, 0], X[anomaly_mask, 4], c='#f85149', alpha=0.8, s=30, marker='x', label='Anomaly')
+ax.set_xlabel('Response Time (ms)')
+ax.set_ylabel('Error Rate')
+ax.set_title('Server Logs — True Labels')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Isolation Forest predictions
+ax = axes[1, 0]
+pred_normal = iso_pred == 1
+pred_anomaly = iso_pred == -1
+ax.scatter(X[pred_normal, 0], X[pred_normal, 4], c='#3fb950', alpha=0.3, s=10, label='Predicted Normal')
+ax.scatter(X[pred_anomaly, 0], X[pred_anomaly, 4], c='#f85149', alpha=0.8, s=30, marker='x', label='Predicted Anomaly')
+ax.set_xlabel('Response Time (ms)')
+ax.set_ylabel('Error Rate')
+ax.set_title('Isolation Forest Predictions')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Contamination sensitivity
+ax = axes[1, 1]
+contamination_values = [0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.1, 0.15]
+precisions, recalls, f1s = [], [], []
+
+for cont in contamination_values:
+    iso_temp = IsolationForest(n_estimators=200, contamination=cont, random_state=42)
+    pred_temp = iso_temp.fit_predict(X)
+    precisions.append(precision_score(y_true, pred_temp, pos_label=-1))
+    recalls.append(recall_score(y_true, pred_temp, pos_label=-1))
+    f1s.append(f1_score(y_true, pred_temp, pos_label=-1))
+
+ax.plot(contamination_values, precisions, 'o-', color='#58a6ff', label='Precision')
+ax.plot(contamination_values, recalls, 's-', color='#3fb950', label='Recall')
+ax.plot(contamination_values, f1s, '^-', color='#f0883e', label='F1')
+ax.axvline(x=n_anomaly/len(X), color='#f85149', linestyle='--', alpha=0.5, label=f'True rate ({n_anomaly/len(X):.3f})')
+ax.set_xlabel('Contamination Parameter')
+ax.set_ylabel('Score')
+ax.set_title('Effect of Contamination on Performance')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_34_anomaly_detection.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Anomaly detection plots saved as project_34_anomaly_detection.png")
+
+# ─── Step 6: Feature analysis of detected anomalies ───
+print(f"\n=== Feature Profile of Detected Anomalies ===")
+detected = X[iso_pred == -1]
+normal = X[iso_pred == 1]
+print(f"{'Feature':<15} {'Normal Mean':>12} {'Anomaly Mean':>14} {'Z-Score':>10}")
+print(f"{'-'*55}")
+for i, name in enumerate(feature_names):
+    n_mean = normal[:, i].mean()
+    n_std = normal[:, i].std()
+    a_mean = detected[:, i].mean()
+    z = (a_mean - n_mean) / n_std if n_std > 0 else 0
+    print(f"{name:<15} {n_mean:>12.2f} {a_mean:>14.2f} {z:>10.2f}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Anomaly detection finds unusual data points without labeled examples — unsupervised, like K-Means (Project 14)</li>
+        <li>Isolation Forest isolates anomalies with random splits — shorter path = more anomalous</li>
+        <li>The contamination parameter controls sensitivity — set it based on domain knowledge of the expected anomaly rate</li>
+        <li>Use decision_function() for continuous scores, not just binary labels — rank anomalies by severity</li>
+        <li>One-Class SVM needs scaling; Isolation Forest doesn't — same tree-based vs distance-based distinction from earlier projects</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 35</h3>
+    <ul>
+        <li>So far, each sample belongs to exactly one class — spam or not, churn or not, one anomaly label</li>
+        <li>But what if a news article belongs to MULTIPLE categories simultaneously — politics AND economics AND technology?</li>
+        <li>Project 35 introduces <strong>multi-label classification</strong> — predicting multiple labels per sample</li>
+        <li>We'll learn new metrics (hamming loss, subset accuracy) and strategies (binary relevance, label powerset)</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_33.html">← Project 33: Probability Calibration</a>
+    <a href="project_35.html">Project 35: Multi-Label Classification →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

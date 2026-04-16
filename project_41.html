@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 41 — Feature Selection at Scale — Boruta, RFE, and Permutation Importance</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 41: Feature Selection at Scale — Boruta, RFE, and Permutation Importance</h1>
+<p>
+    <span class="tag">Boruta</span>
+    <span class="tag">RFE</span>
+    <span class="tag">Permutation Importance</span>
+    <span class="tag">Shadow Features</span>
+    <span class="tag">SelectFromModel</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 18, 27, 31</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A healthcare company has patient data with 200 features — lab results, demographics, vitals, genetic markers</li>
+        <li>Most features are noise; only 20–30 actually predict hospital readmission</li>
+        <li>Lasso (Project 18) zeroes out some features but is sensitive to correlated features</li>
+        <li>SHAP (Project 27) shows importance but doesn't give a clear "keep or drop" decision</li>
+        <li>Goal → systematically identify the truly important features using multiple robust methods</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 18: Lasso does automatic selection but struggles with correlated features (keeps one, drops the other)</li>
+        <li>From Project 27: SHAP gives importance scores but no statistical threshold for "important vs noise"</li>
+        <li>From Project 31: XGBoost/LightGBM have built-in feature importance — but it can be misleading</li>
+        <li>Use Boruta: compares each feature against randomized "shadow" copies — statistical test for relevance</li>
+        <li>Use RFE: recursively removes the least important feature and re-fits — wrapper method</li>
+        <li>Use permutation importance: shuffles each feature and measures performance drop — model-agnostic</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate data with 200 features: 25 informative, 175 noise</li>
+        <li>Apply Lasso-based selection (SelectFromModel) as a baseline</li>
+        <li>Apply Recursive Feature Elimination (RFE) with cross-validation</li>
+        <li>Apply permutation importance on a trained model</li>
+        <li>Implement Boruta algorithm using shadow features</li>
+        <li>Compare which features each method selects — consensus features are the most reliable</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use multiple methods and look for consensus — features selected by all methods are most reliable</li>
+        <li>✅ Use permutation importance on the TEST set — training set importance can be misleading</li>
+        <li>✅ Use Boruta when you need a statistical yes/no decision for each feature</li>
+        <li>✅ Use RFECV (with cross-validation) to find the optimal number of features</li>
+        <li>✅ Compare model performance with all features vs selected features — selection should help or not hurt</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT rely solely on tree-based feature importance — it's biased toward high-cardinality features</li>
+        <li>❌ Do NOT do feature selection on the full dataset — use only training data to avoid leakage</li>
+        <li>❌ Do NOT confuse correlation with importance — a feature correlated with another important feature may appear unimportant</li>
+        <li>❌ Do NOT select features once and never revisit — as data changes, important features may shift</li>
+        <li>❌ Do NOT use filter methods alone (correlation, variance) — they miss feature interactions</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Boruta</strong> → when you need a statistical test for each feature; handles correlated features well</li>
+        <li>🔹 <strong>RFE/RFECV</strong> → when you want to find the optimal subset size; wrapper method</li>
+        <li>🔹 <strong>Permutation importance</strong> → model-agnostic; works with any fitted model; use on test set</li>
+        <li>🔹 <strong>Lasso/SelectFromModel (Project 18)</strong> → fast embedded method; good for linear relationships</li>
+        <li>🔹 <strong>SHAP (Project 27)</strong> → when you need both importance AND interpretability</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you have very few features (< 10) — just keep them all</li>
+        <li>🚫 When features are all known to be relevant from domain knowledge</li>
+        <li>🚫 Boruta with very large datasets — it's slow (trains many random forests)</li>
+        <li>🚫 RFE with expensive models — each elimination step requires a full refit</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Boruta Algorithm</h3>
+    <ul>
+        <li>Create "shadow features" — shuffled copies of all original features</li>
+        <li>Train a random forest on original + shadow features</li>
+        <li>Compare each feature's importance to the maximum shadow feature importance</li>
+        <li>Features consistently beating the best shadow are "confirmed important"</li>
+        <li>Repeat for multiple iterations with statistical testing (binomial test)</li>
+    </ul>
+
+    <h3>Recursive Feature Elimination (RFE)</h3>
+    <ul>
+        <li>Train model with all features → rank by importance</li>
+        <li>Remove the least important feature(s)</li>
+        <li>Retrain and repeat until desired number of features reached</li>
+        <li>RFECV uses cross-validation to find the optimal number automatically</li>
+    </ul>
+
+    <h3>Permutation Importance</h3>
+    <ul>
+        <li>Train model, record baseline performance on test set</li>
+        <li>For each feature: shuffle its values, re-evaluate performance</li>
+        <li>Importance = drop in performance when feature is shuffled</li>
+        <li>Large drop → feature is important; no drop → feature is noise</li>
+        <li>Model-agnostic — works with any model type</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Feature selection on full data</strong> — leaks test information; always select on training set only</li>
+        <li>⚠️ <strong>Correlated features</strong> — permutation importance underestimates both; Boruta handles this better</li>
+        <li>⚠️ <strong>Tree importance bias</strong> — Gini importance favors continuous/high-cardinality features over binary ones</li>
+        <li>⚠️ <strong>Unstable selection</strong> — different random seeds give different results; use multiple runs</li>
+        <li>⚠️ <strong>Removing too aggressively</strong> — some "unimportant" features help in combination with others</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Permutation importance: O(n_features × model_predict_time) — fast for tree models</li>
+        <li>RFE: O(n_features × model_train_time) — expensive for slow models</li>
+        <li>Boruta: O(n_iterations × RF_train_time) with doubled feature space — slowest method</li>
+        <li>For 1000+ features: use filter methods first (variance, correlation) to reduce to ~200, then apply wrapper methods</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Permutation importance is intuitive: "shuffling feature X drops accuracy by 5%"</li>
+        <li>✅ Boruta gives a clear yes/no decision — easy to communicate</li>
+        <li>✅ Consensus across methods builds confidence in the selection</li>
+        <li>⚠️ Different methods may disagree — explain why (correlated features, nonlinear effects)</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFE, SelectFromModel, RFECV
+from sklearn.inspection import permutation_importance
+from sklearn.linear_model import LassoCV
+from sklearn.preprocessing import StandardScaler
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate data with known informative features ───
+X, y = make_classification(
+    n_samples=2000, n_features=200, n_informative=25,
+    n_redundant=10, n_repeated=5, n_clusters_per_class=3,
+    random_state=42, class_sep=1.0
+)
+
+feature_names = [f'feat_{i:03d}' for i in range(200)]
+df = pd.DataFrame(X, columns=feature_names)
+df['target'] = y
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("=== Feature Selection Dataset ===")
+print(f"  Samples: {X.shape[0]}, Features: {X.shape[1]}")
+print(f"  Informative: 25, Redundant: 10, Noise: 165")
+
+# ─── Step 2: Baseline — all features ───
+rf_all = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)
+rf_all.fit(X_train, y_train)
+baseline_score = rf_all.score(X_test, y_test)
+print(f"\n=== Baseline (All 200 Features) ===")
+print(f"  Test accuracy: {baseline_score:.4f}")
+
+# ─── Step 3: Method 1 — Permutation Importance ───
+print(f"\n=== Method 1: Permutation Importance ===")
+perm_result = permutation_importance(rf_all, X_test, y_test, n_repeats=10,
+                                      random_state=42, n_jobs=-1)
+perm_important = np.where(perm_result.importances_mean > 0.005)[0]
+print(f"  Features with importance > 0.005: {len(perm_important)}")
+
+# ─── Step 4: Method 2 — RFE with Cross-Validation ───
+print(f"\n=== Method 2: RFE (selecting top 30) ===")
+rf_rfe = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42, n_jobs=-1)
+rfe = RFE(rf_rfe, n_features_to_select=30, step=10)
+rfe.fit(X_train, y_train)
+rfe_selected = np.where(rfe.support_)[0]
+rfe_score = rfe.score(X_test, y_test)
+print(f"  Selected features: {len(rfe_selected)}")
+print(f"  Test accuracy with RFE features: {rfe_score:.4f}")
+
+# ─── Step 5: Method 3 — SelectFromModel (tree importance) ───
+print(f"\n=== Method 3: SelectFromModel (RF importance) ===")
+sfm = SelectFromModel(rf_all, threshold='1.5*median')
+sfm.fit(X_train, y_train)
+sfm_selected = np.where(sfm.get_support())[0]
+X_train_sfm = sfm.transform(X_train)
+X_test_sfm = sfm.transform(X_test)
+rf_sfm = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)
+rf_sfm.fit(X_train_sfm, y_train)
+sfm_score = rf_sfm.score(X_test_sfm, y_test)
+print(f"  Selected features: {len(sfm_selected)}")
+print(f"  Test accuracy: {sfm_score:.4f}")
+
+# ─── Step 6: Method 4 — Boruta-style (simplified) ───
+print(f"\n=== Method 4: Boruta-Style Shadow Feature Test ===")
+n_boruta_iter = 20
+hit_counts = np.zeros(X_train.shape[1])
+
+for i in range(n_boruta_iter):
+    # Create shadow features (shuffled copies)
+    X_shadow = X_train.copy()
+    for col in range(X_shadow.shape[1]):
+        np.random.shuffle(X_shadow[:, col])
+
+    X_combined = np.hstack([X_train, X_shadow])
+    rf_boruta = RandomForestClassifier(n_estimators=100, max_depth=8,
+                                        random_state=i, n_jobs=-1)
+    rf_boruta.fit(X_combined, y_train)
+
+    importances = rf_boruta.feature_importances_
+    real_imp = importances[:X_train.shape[1]]
+    shadow_imp = importances[X_train.shape[1]:]
+    shadow_max = shadow_imp.max()
+
+    hits = real_imp > shadow_max
+    hit_counts += hits
+
+# Features that beat shadows in >50% of iterations
+boruta_threshold = n_boruta_iter * 0.5
+boruta_selected = np.where(hit_counts > boruta_threshold)[0]
+print(f"  Iterations: {n_boruta_iter}")
+print(f"  Features confirmed important: {len(boruta_selected)}")
+
+# Evaluate Boruta selection
+rf_boruta_eval = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)
+rf_boruta_eval.fit(X_train[:, boruta_selected], y_train)
+boruta_score = rf_boruta_eval.score(X_test[:, boruta_selected], y_test)
+print(f"  Test accuracy: {boruta_score:.4f}")
+
+# ─── Step 7: Consensus — features selected by multiple methods ───
+print(f"\n=== Consensus Analysis ===")
+all_methods = {
+    'Permutation': set(perm_important),
+    'RFE': set(rfe_selected),
+    'SelectFromModel': set(sfm_selected),
+    'Boruta': set(boruta_selected)
+}
+
+all_selected = set()
+for features in all_methods.values():
+    all_selected |= features
+
+consensus_counts = {}
+for feat in all_selected:
+    count = sum(1 for features in all_methods.values() if feat in features)
+    consensus_counts[feat] = count
+
+consensus_3plus = [f for f, c in consensus_counts.items() if c >= 3]
+consensus_all = [f for f, c in consensus_counts.items() if c == 4]
+
+print(f"  Selected by ≥3 methods: {len(consensus_3plus)} features")
+print(f"  Selected by all 4 methods: {len(consensus_all)} features")
+
+# Evaluate consensus
+rf_consensus = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42, n_jobs=-1)
+rf_consensus.fit(X_train[:, consensus_3plus], y_train)
+consensus_score = rf_consensus.score(X_test[:, consensus_3plus], y_test)
+print(f"  Test accuracy (≥3 consensus): {consensus_score:.4f}")
+
+# ─── Step 8: Summary ───
+print(f"\n=== Final Comparison ===")
+print(f"  {'Method':<25} {'# Features':>12} {'Test Acc':>10}")
+print(f"  {'-'*49}")
+print(f"  {'All features':<25} {200:>12} {baseline_score:>10.4f}")
+print(f"  {'Permutation':<25} {len(perm_important):>12} {'—':>10}")
+print(f"  {'RFE (top 30)':<25} {len(rfe_selected):>12} {rfe_score:>10.4f}")
+print(f"  {'SelectFromModel':<25} {len(sfm_selected):>12} {sfm_score:>10.4f}")
+print(f"  {'Boruta':<25} {len(boruta_selected):>12} {boruta_score:>10.4f}")
+print(f"  {'Consensus (≥3)':<25} {len(consensus_3plus):>12} {consensus_score:>10.4f}")
+
+# ─── Step 9: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Top 30 permutation importances
+top30_idx = np.argsort(perm_result.importances_mean)[-30:]
+axes[0, 0].barh(range(30), perm_result.importances_mean[top30_idx], color='#58a6ff', alpha=0.7)
+axes[0, 0].set_yticks(range(30))
+axes[0, 0].set_yticklabels([feature_names[i] for i in top30_idx], fontsize=6)
+axes[0, 0].set_xlabel('Permutation Importance')
+axes[0, 0].set_title('Top 30 Features (Permutation)')
+axes[0, 0].grid(True, alpha=0.2, axis='x')
+
+# Boruta hit counts
+sorted_hits = np.argsort(hit_counts)[-40:]
+colors = ['#3fb950' if hit_counts[i] > boruta_threshold else '#f85149' for i in sorted_hits]
+axes[0, 1].barh(range(40), hit_counts[sorted_hits], color=colors, alpha=0.7)
+axes[0, 1].axvline(boruta_threshold, color='white', linestyle='--', label=f'Threshold ({boruta_threshold:.0f})')
+axes[0, 1].set_yticks(range(40))
+axes[0, 1].set_yticklabels([feature_names[i] for i in sorted_hits], fontsize=6)
+axes[0, 1].set_xlabel('Hit Count (out of 20)')
+axes[0, 1].set_title('Boruta Shadow Test Results')
+axes[0, 1].legend(fontsize=8)
+axes[0, 1].grid(True, alpha=0.2, axis='x')
+
+# Method agreement heatmap
+method_names = list(all_methods.keys())
+top_features = sorted(consensus_counts.keys(), key=lambda x: consensus_counts[x], reverse=True)[:40]
+agreement_matrix = np.zeros((len(top_features), len(method_names)))
+for j, method in enumerate(method_names):
+    for i, feat in enumerate(top_features):
+        agreement_matrix[i, j] = 1 if feat in all_methods[method] else 0
+
+axes[1, 0].imshow(agreement_matrix, cmap='RdYlGn', aspect='auto')
+axes[1, 0].set_xticks(range(len(method_names)))
+axes[1, 0].set_xticklabels(method_names, fontsize=8)
+axes[1, 0].set_yticks(range(len(top_features)))
+axes[1, 0].set_yticklabels([feature_names[f] for f in top_features], fontsize=5)
+axes[1, 0].set_title('Method Agreement (Top 40 Features)')
+
+# Accuracy comparison
+methods_plot = ['All (200)', 'RFE (30)', 'SFM', 'Boruta', 'Consensus']
+scores_plot = [baseline_score, rfe_score, sfm_score, boruta_score, consensus_score]
+n_feats_plot = [200, 30, len(sfm_selected), len(boruta_selected), len(consensus_3plus)]
+colors_plot = ['#c9d1d9', '#58a6ff', '#f0883e', '#3fb950', '#bc8cff']
+bars = axes[1, 1].bar(methods_plot, scores_plot, color=colors_plot, alpha=0.8, edgecolor='white')
+for bar, n in zip(bars, n_feats_plot):
+    axes[1, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.002,
+                     f'n={n}', ha='center', fontsize=8, color='white')
+axes[1, 1].set_ylabel('Test Accuracy')
+axes[1, 1].set_title('Accuracy vs Feature Count')
+axes[1, 1].grid(True, alpha=0.2, axis='y')
+axes[1, 1].set_ylim(min(scores_plot) - 0.02, max(scores_plot) + 0.02)
+
+plt.tight_layout()
+plt.savefig('project_41_feature_selection.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Feature selection analysis saved as project_41_feature_selection.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>No single feature selection method is perfect — use multiple methods and look for consensus</li>
+        <li>Boruta provides a statistical test against shadow features — the most principled approach</li>
+        <li>Permutation importance is model-agnostic and should be computed on the test set</li>
+        <li>RFE finds the optimal subset size but is computationally expensive</li>
+        <li>Fewer features often gives equal or better performance — plus faster training and easier interpretation</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 42</h3>
+    <ul>
+        <li>We've been manually choosing models and tuning hyperparameters — what if we automate the entire process?</li>
+        <li>Project 42 introduces <strong>AutoML</strong> with FLAML and Optuna — automated model selection and tuning</li>
+        <li>This builds on hyperparameter tuning (Project 22), XGBoost/LightGBM (Project 31), and stacking (Project 32)</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_40.html">← Project 40: Mixed Effects Models</a>
+    <a href="project_42.html">Project 42: AutoML →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

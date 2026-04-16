@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 11 — Classifying Iris Flowers — K-Nearest Neighbors</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 2 — Easy</span>
+<h1>Project 11: Classifying Iris Flowers — K-Nearest Neighbors</h1>
+<p>
+    <span class="tag">KNN algorithm</span>
+    <span class="tag">distance metrics</span>
+    <span class="tag">choosing K</span>
+    <span class="tag">decision boundary</span>
+</p>
+<p class="difficulty">Difficulty: Easy &nbsp;|&nbsp; Builds on: Projects 4, 8</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a botanist cataloging flower species</li>
+        <li>Given measurements (petal length, petal width, sepal length, sepal width), classify the species</li>
+        <li>Three species: Setosa, Versicolor, Virginica</li>
+        <li>Logistic regression (Project 6, 10) assumes a linear boundary — what if species overlap in complex ways?</li>
+        <li>KNN makes NO assumptions about the boundary shape — it just looks at the nearest neighbors</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>The idea: to classify a new flower, find the K most similar flowers in the training data</li>
+        <li>The majority class among those K neighbors = the prediction</li>
+        <li>Key decisions: what value of K? What distance metric?</li>
+        <li>Feature scaling is CRITICAL — KNN uses distances, and unscaled features distort distances</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Load the Iris dataset (sklearn built-in)</li>
+        <li>Scale features (essential for distance-based methods)</li>
+        <li>Implement KNN from scratch to understand the algorithm</li>
+        <li>Use sklearn's KNeighborsClassifier</li>
+        <li>Try different K values and compare accuracy</li>
+        <li>Visualize decision boundaries (2D projection)</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ ALWAYS scale features before KNN — distances are meaningless on unscaled data</li>
+        <li>✅ Try multiple K values — too small = overfitting, too large = underfitting (Project 8)</li>
+        <li>✅ Use odd K for binary classification to avoid ties</li>
+        <li>✅ Understand that KNN stores ALL training data — it's a "lazy learner"</li>
+        <li>✅ Compare KNN with logistic regression on the same data — see where each excels</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use KNN without scaling — a feature in thousands will dominate one in single digits</li>
+        <li>❌ Do NOT use K=1 in production — it overfits to individual training points</li>
+        <li>❌ Do NOT use KNN with high-dimensional data (100+ features) — distances become meaningless (curse of dimensionality)</li>
+        <li>❌ Do NOT expect KNN to be fast at prediction time — it computes distances to ALL training points</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>KNN</strong> → when the decision boundary is complex/nonlinear and you have moderate data</li>
+        <li>🔹 <strong>Euclidean distance</strong> → default, works well for continuous features on similar scales</li>
+        <li>🔹 <strong>Manhattan distance</strong> → more robust to outliers than Euclidean</li>
+        <li>🔹 <strong>Small K (3-5)</strong> → captures local patterns, risk of overfitting</li>
+        <li>🔹 <strong>Large K (15-30)</strong> → smoother boundaries, risk of underfitting</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 High-dimensional data → distances become meaningless (curse of dimensionality)</li>
+        <li>🚫 Large training sets (1M+ rows) → prediction is slow (compute distance to every point)</li>
+        <li>🚫 When you need interpretability → KNN can't explain WHY it classified something</li>
+        <li>🚫 When features are on very different scales and you can't scale them</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The KNN Algorithm</h3>
+    <ul>
+        <li>Training phase: just store the data (no computation)</li>
+        <li>Prediction phase for a new point x:
+            <ol>
+                <li>Compute distance from x to EVERY training point</li>
+                <li>Sort by distance, pick the K closest</li>
+                <li>Count the class labels among those K neighbors</li>
+                <li>Predict the majority class</li>
+            </ol>
+        </li>
+    </ul>
+
+    <h3>Distance Metrics</h3>
+    <ul>
+        <li>Euclidean: <code>d = √(Σ(xᵢ - yᵢ)²)</code> — straight-line distance</li>
+        <li>Manhattan: <code>d = Σ|xᵢ - yᵢ|</code> — city-block distance</li>
+        <li>Euclidean is sensitive to outliers (squared terms); Manhattan is more robust</li>
+    </ul>
+
+    <h3>K as a Complexity Knob</h3>
+    <ul>
+        <li>K=1 → most complex boundary, highest variance (overfitting)</li>
+        <li>K=n → simplest boundary (always predict majority class), highest bias (underfitting)</li>
+        <li>This is the bias-variance tradeoff from Project 8 in action</li>
+    </ul>
+
+    <h3>Why Scaling Matters</h3>
+    <ul>
+        <li>If feature A ranges 0-1000 and feature B ranges 0-1, distance is dominated by A</li>
+        <li>StandardScaler (mean=0, std=1) puts all features on equal footing</li>
+        <li>This is the first time scaling is REQUIRED — for linear models it's optional</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Forgetting to scale</strong> — the #1 KNN mistake</li>
+        <li>⚠️ <strong>Using K=1</strong> — memorizes training data, terrible generalization</li>
+        <li>⚠️ <strong>Even K for binary classification</strong> — can result in ties</li>
+        <li>⚠️ <strong>Curse of dimensionality</strong> — with 100 features, all points are roughly equidistant</li>
+        <li>⚠️ <strong>Slow prediction</strong> — KNN is O(n×d) per prediction where n=training size, d=features</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Training: O(1) — just store the data</li>
+        <li>Prediction: O(n × d) per sample — slow for large n</li>
+        <li>KD-trees and Ball-trees speed up neighbor search to O(d × log n) for low dimensions</li>
+        <li>For n &gt; 100K, consider approximate nearest neighbors (FAISS, Annoy)</li>
+        <li>Memory: stores entire training set — O(n × d)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Intuitive concept: "this flower is most similar to these K flowers, which are all Setosa"</li>
+        <li>✅ Can show the actual neighbors as explanation</li>
+        <li>❌ No global model — can't say "petal length is the most important feature" directly</li>
+        <li>❌ Decision boundary is implicit — can't write it as an equation</li>
+        <li>⚠️ Less interpretable than logistic regression, but more flexible</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, accuracy_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Load Iris dataset ───
+iris = load_iris()
+X, y = iris.data, iris.target
+feature_names = iris.feature_names
+class_names = iris.target_names
+
+print(f"=== Iris Dataset ===")
+print(f"  Samples: {X.shape[0]} | Features: {X.shape[1]}")
+print(f"  Classes: {list(class_names)}")
+print(f"  Features: {feature_names}")
+
+# ─── Step 2: Scale features (CRITICAL for KNN) ───
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
+print(f"\n=== Scaling Effect ===")
+print(f"  Before: mean={X_train.mean(axis=0).round(2)}, std={X_train.std(axis=0).round(2)}")
+print(f"  After:  mean={X_train_s.mean(axis=0).round(2)}, std={X_train_s.std(axis=0).round(2)}")
+
+# ─── Step 3: KNN from scratch (for understanding) ───
+def knn_predict_one(X_train, y_train, x_new, k=5):
+    distances = np.sqrt(np.sum((X_train - x_new) ** 2, axis=1))
+    nearest_idx = np.argsort(distances)[:k]
+    nearest_labels = y_train[nearest_idx]
+    prediction = np.bincount(nearest_labels).argmax()
+    return prediction, distances[nearest_idx]
+
+# Demo on one test point
+pred, dists = knn_predict_one(X_train_s, y_train, X_test_s[0], k=5)
+print(f"\n=== Manual KNN (K=5) for first test point ===")
+print(f"  Predicted: {class_names[pred]} | Actual: {class_names[y_test[0]]}")
+print(f"  Neighbor distances: {dists.round(3)}")
+
+# ─── Step 4: Try different K values ───
+k_values = [1, 3, 5, 7, 9, 15, 25]
+print(f"\n=== K Value Comparison ===")
+print(f"{'K':>5} {'Train Acc':>10} {'Test Acc':>10} {'Gap':>8} {'Status':>12}")
+print("-" * 48)
+
+best_k, best_acc = 1, 0
+for k in k_values:
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train_s, y_train)
+    train_acc = knn.score(X_train_s, y_train)
+    test_acc = knn.score(X_test_s, y_test)
+    gap = train_acc - test_acc
+
+    if gap > 0.05:
+        status = "OVERFITTING"
+    elif train_acc < 0.85:
+        status = "UNDERFITTING"
+    else:
+        status = "GOOD"
+
+    print(f"{k:>5} {train_acc:>10.2%} {test_acc:>10.2%} {gap:>+8.2%} {status:>12}")
+
+    if test_acc > best_acc:
+        best_acc = test_acc
+        best_k = k
+
+print(f"\n✅ Best K={best_k} (Test Accuracy={best_acc:.2%})")
+
+# ─── Step 5: Final model with best K ───
+final_model = KNeighborsClassifier(n_neighbors=best_k)
+final_model.fit(X_train_s, y_train)
+y_pred = final_model.predict(X_test_s)
+
+print(f"\n=== Classification Report (K={best_k}) ===")
+print(classification_report(y_test, y_pred, target_names=class_names))
+
+# ─── Step 6: Distance metric comparison ───
+print(f"=== Distance Metric Comparison ===")
+for metric in ['euclidean', 'manhattan']:
+    knn_m = KNeighborsClassifier(n_neighbors=best_k, metric=metric)
+    knn_m.fit(X_train_s, y_train)
+    acc = knn_m.score(X_test_s, y_test)
+    print(f"  {metric:>12}: {acc:.2%}")
+
+# ─── Step 7: Comparison with Logistic Regression ───
+from sklearn.linear_model import LogisticRegression
+lr = LogisticRegression(max_iter=1000, random_state=42)
+lr.fit(X_train_s, y_train)
+lr_acc = lr.score(X_test_s, y_test)
+print(f"\n=== KNN vs Logistic Regression ===")
+print(f"  KNN (K={best_k}):          {best_acc:.2%}")
+print(f"  Logistic Regression: {lr_acc:.2%}")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>KNN classifies by majority vote of K nearest neighbors — no training phase</li>
+        <li>Feature scaling is MANDATORY — distances are meaningless without it</li>
+        <li>K controls the bias-variance tradeoff: small K = complex boundary, large K = smooth boundary</li>
+        <li>KNN makes no assumptions about boundary shape — more flexible than logistic regression</li>
+        <li>Tradeoff: flexibility comes at the cost of interpretability and prediction speed</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 12</h3>
+    <ul>
+        <li>KNN is flexible but can't explain its decisions</li>
+        <li>Project 12 introduces <strong>Decision Trees</strong> — a model that creates explicit IF-THEN rules</li>
+        <li>Decision trees are highly interpretable AND can capture nonlinear patterns</li>
+        <li>They also introduce the concept of <strong>Gini impurity</strong> — how the tree decides where to split</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_10.html">← Project 10: Diagnosing Medical Risk</a>
+    <a href="project_12.html">Project 12: Predicting Loan Default — Decision Tree →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

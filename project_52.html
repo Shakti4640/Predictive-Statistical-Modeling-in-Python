@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 52 — Online Learning — Models That Update With Every New Transaction</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 52: Online Learning — Models That Update With Every New Transaction</h1>
+<p>
+    <span class="tag">Online Learning</span>
+    <span class="tag">SGDClassifier</span>
+    <span class="tag">Concept Drift</span>
+    <span class="tag">Partial Fit</span>
+    <span class="tag">Sliding Window</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 26, 44, 42</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A payment processor handles 10 million transactions per day and needs real-time fraud detection</li>
+        <li>Fraud patterns evolve constantly — last month's top attack was card-not-present fraud; this month it's account takeover with synthetic identities</li>
+        <li>Their batch-trained Random Forest (Project 26) achieved 98% recall at deployment — but after 3 weeks, recall dropped to 82% as fraudsters adapted</li>
+        <li>Retraining the full model takes 6 hours on the complete dataset — during which new fraud patterns go undetected</li>
+        <li>They need a model that updates incrementally with each new labeled transaction, adapting to concept drift without full retraining</li>
+        <li>Goal → implement online learning that maintains high fraud detection as attack patterns shift over time</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 26 (Random Forest): batch models are powerful but static — they can't adapt between retraining cycles</li>
+        <li>From Project 44 (Imbalanced Learning): fraud is rare (~0.5%) — online learning must handle class imbalance in streaming data</li>
+        <li>From Project 42 (Pipeline): production models need robust preprocessing — online learning must standardize features incrementally</li>
+        <li>The key idea: use models with a <code>partial_fit()</code> method that updates weights with each new mini-batch instead of retraining from scratch</li>
+        <li>Combine with drift detection — monitor performance metrics over sliding windows to detect when the data distribution changes</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate a synthetic transaction stream with deliberate concept drift — fraud patterns change at known time points</li>
+        <li>Implement online learning with SGDClassifier using partial_fit — update the model with each mini-batch of transactions</li>
+        <li>Build a sliding window performance tracker — monitor precision, recall, and F1 over recent windows</li>
+        <li>Implement concept drift detection using the ADWIN-inspired approach — detect when error rate changes significantly</li>
+        <li>Compare online SGD vs periodically retrained batch model vs static (never updated) model</li>
+        <li>Show how online learning maintains performance through drift while the static model degrades</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Use <code>partial_fit()</code> with explicit <code>classes</code> parameter on the first call — sklearn needs to know all possible classes upfront</li>
+        <li>✅ Scale features incrementally — use running mean/variance or sklearn's <code>StandardScaler.partial_fit()</code></li>
+        <li>✅ Monitor performance on a sliding window — detect drift before it causes major damage</li>
+        <li>✅ Use class weights or oversampling in the stream to handle imbalanced fraud data</li>
+        <li>✅ Keep a buffer of recent data for evaluation — you can't evaluate on data you just trained on</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT call <code>fit()</code> instead of <code>partial_fit()</code> — fit() resets the model, losing all previously learned patterns</li>
+        <li>❌ Do NOT use a learning rate that's too high — the model will oscillate and forget stable patterns</li>
+        <li>❌ Do NOT ignore class imbalance in the stream — if 99.5% of transactions are legitimate, the model will learn to predict "not fraud" always</li>
+        <li>❌ Do NOT evaluate on the same data you just trained on — this gives optimistically biased metrics</li>
+        <li>❌ Do NOT assume all sklearn models support partial_fit — only SGDClassifier, MultinomialNB, MiniBatchKMeans, and a few others do</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Online SGD (partial_fit)</strong> → streaming data, concept drift, need to update without full retraining</li>
+        <li>🔹 <strong>Sliding Window Retraining</strong> → moderate drift, enough compute to retrain on recent window periodically</li>
+        <li>🔹 <strong>Batch Retraining (Project 26)</strong> → stable distributions, can afford periodic full retraining (e.g., weekly)</li>
+        <li>🔹 <strong>Ensemble of Windows</strong> → combine models trained on different time windows for robustness</li>
+        <li>🔹 <strong>Adaptive Learning Rate</strong> → when drift speed varies — fast adaptation during drift, stability otherwise</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When the data distribution is truly static — batch models with full data access will outperform online models</li>
+        <li>🚫 When labels arrive with long delays — online learning needs timely labels to update; if fraud labels take months, batch is better</li>
+        <li>🚫 When the model is complex (deep ensemble, stacked models) — partial_fit is limited to simple model families</li>
+        <li>🚫 When you need reproducibility — online learning results depend on data ordering, making exact reproduction difficult</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Stochastic Gradient Descent (Online)</h3>
+    <ul>
+        <li>Standard gradient descent: w ← w - η · ∇L(w; X_all, y_all) — requires full dataset</li>
+        <li>Online SGD: w ← w - η · ∇L(w; xᵢ, yᵢ) — updates with single sample or mini-batch</li>
+        <li>Each partial_fit call computes the gradient on the new batch and takes one step</li>
+        <li>With appropriate learning rate schedule (e.g., η_t = η₀ / (1 + η₀ · λ · t)), SGD converges to the optimum</li>
+    </ul>
+
+    <h3>Concept Drift Types</h3>
+    <ul>
+        <li><strong>Sudden drift</strong>: distribution changes abruptly (e.g., new fraud technique appears overnight)</li>
+        <li><strong>Gradual drift</strong>: old and new distributions overlap during transition period</li>
+        <li><strong>Incremental drift</strong>: distribution shifts slowly and continuously</li>
+        <li><strong>Recurring drift</strong>: distribution cycles between known states (e.g., seasonal fraud patterns)</li>
+    </ul>
+
+    <h3>Sliding Window Strategy</h3>
+    <ul>
+        <li>Maintain a window of the most recent W samples</li>
+        <li>Retrain the model on the window periodically — forgets old patterns, adapts to new ones</li>
+        <li>Window size trades off: too small → high variance, too large → slow adaptation</li>
+        <li>Can combine with online learning: partial_fit on new data + periodic window retraining as a reset</li>
+    </ul>
+
+    <h3>Drift Detection</h3>
+    <ul>
+        <li>Monitor error rate over a sliding window — if it increases significantly, drift has occurred</li>
+        <li>Page-Hinkley test: accumulate deviations from the mean error; trigger when cumulative sum exceeds threshold</li>
+        <li>ADWIN (Adaptive Windowing): automatically shrinks the window when drift is detected</li>
+        <li>When drift is detected: increase learning rate temporarily, or reset the model and retrain on recent data</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Catastrophic forgetting</strong> — learning rate too high causes the model to forget stable patterns when adapting to drift</li>
+        <li>⚠️ <strong>Label delay</strong> — in fraud detection, true labels may arrive days or weeks later; the model trains on stale feedback</li>
+        <li>⚠️ <strong>Class imbalance in stream</strong> — if mini-batches contain no fraud examples, the model drifts toward "always predict legitimate"</li>
+        <li>⚠️ <strong>Feature distribution shift</strong> — if you standardized features on old data, new data may have different scales; use incremental scaling</li>
+        <li>⚠️ <strong>Evaluation bias</strong> — evaluating on the training stream gives misleading metrics; always use a held-out evaluation window</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Online SGD is O(d) per sample (d = number of features) — can handle millions of transactions per second</li>
+        <li>Memory is O(d) for model weights — no need to store the full dataset</li>
+        <li>Sliding window retraining is O(W × d) where W is window size — choose W based on compute budget</li>
+        <li>For very high throughput: batch partial_fit calls (e.g., 1000 samples at a time) for better vectorization</li>
+        <li>Drift detection adds minimal overhead — O(1) per sample for running statistics</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ SGD coefficients are interpretable — positive weight on "transaction_amount" means higher amounts increase fraud probability</li>
+        <li>✅ Coefficient drift over time shows which features become more/less important — track weight trajectories</li>
+        <li>✅ Sliding window metrics show exactly when performance degrades — pinpoint drift timing</li>
+        <li>⚠️ Online models change constantly — explanations for the same input may differ between yesterday and today</li>
+        <li>⚠️ Hard to audit — no single "model version" to inspect; need to log model snapshots periodically</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 1: Generate Streaming Transaction Data With Concept Drift
+# ═══════════════════════════════════════════════════════════════
+def generate_transaction_batch(n, fraud_pattern='A', fraud_rate=0.02):
+    """Generate a batch of transactions with a specific fraud pattern."""
+    amount = np.random.exponential(50, n)
+    hour = np.random.randint(0, 24, n)
+    is_international = np.random.binomial(1, 0.15, n)
+    merchant_risk = np.random.uniform(0, 1, n)
+    velocity = np.random.poisson(2, n)
+    device_age_days = np.random.exponential(180, n)
+
+    X = np.column_stack([amount, hour, is_international, merchant_risk, velocity, device_age_days])
+
+    if fraud_pattern == 'A':
+        fraud_score = (0.01 * amount + 0.5 * is_international + 0.3 * merchant_risk
+                       + 0.1 * velocity - 0.001 * device_age_days)
+    elif fraud_pattern == 'B':
+        fraud_score = (0.005 * amount + 0.1 * is_international + 0.6 * merchant_risk
+                       + 0.4 * velocity + 0.3 * (hour > 22).astype(float))
+    else:
+        fraud_score = (0.02 * amount + 0.3 * is_international + 0.2 * merchant_risk
+                       + 0.05 * velocity + 0.5 * (device_age_days < 30).astype(float))
+
+    threshold = np.percentile(fraud_score, 100 * (1 - fraud_rate))
+    y = (fraud_score > threshold).astype(int)
+    return X, y
+
+# Create a stream with concept drift at known points
+stream_config = [
+    ('A', 3000), ('A', 2000),  # Phase 1: pattern A (5000 transactions)
+    ('B', 2000), ('B', 3000),  # Phase 2: drift to pattern B (5000 transactions)
+    ('C', 2000), ('C', 3000),  # Phase 3: drift to pattern C (5000 transactions)
+]
+
+X_stream, y_stream = [], []
+drift_points = []
+total = 0
+for pattern, n in stream_config:
+    X_batch, y_batch = generate_transaction_batch(n, fraud_pattern=pattern)
+    X_stream.append(X_batch)
+    y_stream.append(y_batch)
+    total += n
+    drift_points.append(total)
+
+X_stream = np.vstack(X_stream)
+y_stream = np.concatenate(y_stream)
+
+print(f"=== Transaction Stream ===")
+print(f"  Total transactions: {len(y_stream)}")
+print(f"  Fraud rate: {y_stream.mean():.2%}")
+print(f"  Drift points: {drift_points[1::2]}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2: Online Learning with SGDClassifier
+# ═══════════════════════════════════════════════════════════════
+batch_size = 200
+n_batches = len(y_stream) // batch_size
+
+# Incremental scaler
+scaler = StandardScaler()
+
+# Online model
+online_model = SGDClassifier(loss='log_loss', learning_rate='optimal',
+                              class_weight={0: 1, 1: 50}, random_state=42)
+
+# Static model (trained once on first 1000 samples)
+static_model = SGDClassifier(loss='log_loss', learning_rate='optimal',
+                              class_weight={0: 1, 1: 50}, random_state=42)
+
+# Metrics tracking
+online_metrics = {'f1': [], 'precision': [], 'recall': [], 'accuracy': []}
+static_metrics = {'f1': [], 'precision': [], 'recall': [], 'accuracy': []}
+batch_indices = []
+
+# Initial training on first 5 batches
+init_batches = 5
+X_init = X_stream[:init_batches * batch_size]
+y_init = y_stream[:init_batches * batch_size]
+scaler.partial_fit(X_init)
+X_init_scaled = scaler.transform(X_init)
+
+online_model.partial_fit(X_init_scaled, y_init, classes=[0, 1])
+static_model.fit(X_init_scaled, y_init)
+
+print(f"\n=== Online Learning Progress ===")
+
+# Process remaining stream
+eval_window = 500  # evaluate on last 500 predictions
+predictions_online = []
+predictions_static = []
+actuals = []
+
+for i in range(init_batches, n_batches):
+    start = i * batch_size
+    end = start + batch_size
+    X_batch = X_stream[start:end]
+    y_batch = y_stream[start:end]
+
+    # Scale incrementally
+    scaler.partial_fit(X_batch)
+    X_batch_scaled = scaler.transform(X_batch)
+
+    # Predict BEFORE updating (honest evaluation)
+    pred_online = online_model.predict(X_batch_scaled)
+    pred_static = static_model.predict(X_batch_scaled)
+
+    predictions_online.extend(pred_online)
+    predictions_static.extend(pred_static)
+    actuals.extend(y_batch)
+
+    # Update online model
+    online_model.partial_fit(X_batch_scaled, y_batch)
+
+    # Evaluate on sliding window
+    if len(actuals) >= eval_window:
+        window_actual = np.array(actuals[-eval_window:])
+        window_online = np.array(predictions_online[-eval_window:])
+        window_static = np.array(predictions_static[-eval_window:])
+
+        if len(np.unique(window_actual)) > 1:
+            online_metrics['f1'].append(f1_score(window_actual, window_online, zero_division=0))
+            online_metrics['recall'].append(recall_score(window_actual, window_online, zero_division=0))
+            static_metrics['f1'].append(f1_score(window_actual, window_static, zero_division=0))
+            static_metrics['recall'].append(recall_score(window_actual, window_static, zero_division=0))
+            batch_indices.append(i * batch_size)
+
+    if (i - init_batches) % 15 == 0 and len(online_metrics['f1']) > 0:
+        print(f"  Batch {i:>3} (t={i*batch_size:>5}): "
+              f"Online F1={online_metrics['f1'][-1]:.3f}, "
+              f"Static F1={static_metrics['f1'][-1]:.3f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 3: Drift Detection (Simple Error Rate Monitor)
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== Drift Detection ===")
+window_size = 500
+error_rates = []
+drift_detected = []
+
+for i in range(window_size, len(actuals)):
+    window = np.array(actuals[i-window_size:i])
+    preds = np.array(predictions_online[i-window_size:i])
+    error_rate = 1 - accuracy_score(window, preds)
+    error_rates.append(error_rate)
+
+    if len(error_rates) > 100:
+        recent_mean = np.mean(error_rates[-50:])
+        historical_mean = np.mean(error_rates[-100:-50])
+        if recent_mean > historical_mean * 1.5 and recent_mean > 0.05:
+            if not drift_detected or (i - drift_detected[-1]) > 500:
+                drift_detected.append(i)
+                print(f"  ⚠️ Drift detected at t={i + init_batches*batch_size}: "
+                      f"error rate jumped from {historical_mean:.3f} to {recent_mean:.3f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: Final Comparison
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== Final Performance Summary ===")
+final_actual = np.array(actuals[-2000:])
+final_online = np.array(predictions_online[-2000:])
+final_static = np.array(predictions_static[-2000:])
+
+print(f"  {'Metric':<15} {'Online SGD':>12} {'Static Model':>14}")
+print(f"  {'-'*43}")
+for metric_name, metric_fn in [('F1', f1_score), ('Precision', precision_score),
+                                 ('Recall', recall_score), ('Accuracy', accuracy_score)]:
+    o = metric_fn(final_actual, final_online, zero_division=0)
+    s = metric_fn(final_actual, final_static, zero_division=0)
+    print(f"  {metric_name:<15} {o:>12.4f} {s:>14.4f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 5: Visualization
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# F1 over time
+ax = axes[0, 0]
+ax.plot(batch_indices, online_metrics['f1'], color='#3fb950', linewidth=1.5, label='Online SGD', alpha=0.8)
+ax.plot(batch_indices, static_metrics['f1'], color='#f85149', linewidth=1.5, label='Static Model', alpha=0.8)
+for dp in [5000, 10000]:
+    ax.axvline(x=dp, color='#f0883e', linestyle='--', alpha=0.7, label='Drift point' if dp == 5000 else '')
+ax.set_xlabel('Transaction #')
+ax.set_ylabel('F1 Score (sliding window)')
+ax.set_title('F1 Score Over Time — Online vs Static')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Recall over time
+ax = axes[0, 1]
+ax.plot(batch_indices, online_metrics['recall'], color='#3fb950', linewidth=1.5, label='Online SGD')
+ax.plot(batch_indices, static_metrics['recall'], color='#f85149', linewidth=1.5, label='Static Model')
+for dp in [5000, 10000]:
+    ax.axvline(x=dp, color='#f0883e', linestyle='--', alpha=0.7)
+ax.set_xlabel('Transaction #')
+ax.set_ylabel('Recall (sliding window)')
+ax.set_title('Fraud Recall Over Time')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Error rate with drift detection
+ax = axes[1, 0]
+if error_rates:
+    ax.plot(range(len(error_rates)), error_rates, color='#58a6ff', linewidth=1, alpha=0.7)
+    for dd in drift_detected:
+        ax.axvline(x=dd - window_size, color='#f85149', linestyle='--', alpha=0.8)
+ax.set_xlabel('Time Step')
+ax.set_ylabel('Error Rate')
+ax.set_title('Error Rate — Drift Detection')
+ax.grid(True, alpha=0.2)
+
+# Cumulative performance
+ax = axes[1, 1]
+cum_correct_online = np.cumsum(np.array(actuals) == np.array(predictions_online))
+cum_correct_static = np.cumsum(np.array(actuals) == np.array(predictions_static))
+x_range = range(len(actuals))
+ax.plot(x_range, cum_correct_online / (np.arange(len(actuals)) + 1), color='#3fb950', label='Online SGD')
+ax.plot(x_range, cum_correct_static / (np.arange(len(actuals)) + 1), color='#f85149', label='Static')
+ax.set_xlabel('Transaction #')
+ax.set_ylabel('Cumulative Accuracy')
+ax.set_title('Cumulative Accuracy Over Stream')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_52_online_learning.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ Online learning analysis saved as project_52_online_learning.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Online learning updates models incrementally — no full retraining needed when data streams continuously</li>
+        <li>SGDClassifier.partial_fit() is the workhorse — O(d) per sample, handles millions of transactions</li>
+        <li>Concept drift degrades static models — online learning adapts, maintaining performance through distribution shifts</li>
+        <li>Drift detection monitors error rates over sliding windows — triggers alerts when patterns change</li>
+        <li>Always evaluate on held-out windows, not the data you just trained on</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 53</h3>
+    <ul>
+        <li>We've built models that predict and adapt — but can we explain WHY a specific prediction was made?</li>
+        <li>Project 53 introduces <strong>counterfactual explanations</strong> — "Your loan was rejected; if your income were $5K higher, it would have been approved"</li>
+        <li>This builds on SHAP values from Project 27 (global/local explanations) and causal thinking from Project 37</li>
+        <li>Counterfactuals provide actionable recourse — not just "why was I rejected" but "what can I change"</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_51.html">← Project 51: Conformal Prediction</a>
+    <a href="project_53.html">Project 53: Counterfactual Explanations →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

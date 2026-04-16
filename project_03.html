@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 3 — House Price From Square Footage — One Feature, One Output</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --heading: #58a6ff;
+            --accent: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --purple: #bc8cff;
+            --code-bg: #0d1117;
+            --link: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2rem;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge {
+            display: inline-block;
+            background: #1f6feb33;
+            color: var(--heading);
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            color: #e6edf3;
+        }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge {
+            background: linear-gradient(135deg, #1f6feb22, #bc8cff22);
+            border: 1px solid var(--purple);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 1 — Very Easy</span>
+<h1>Project 3: House Price From Square Footage — One Feature, One Output</h1>
+<p>
+    <span class="tag">Cost function (MSE)</span>
+    <span class="tag">model fitting</span>
+    <span class="tag">prediction vs actuals</span>
+    <span class="tag">matplotlib scatter</span>
+</p>
+<p class="difficulty">Difficulty: Very Easy &nbsp;|&nbsp; Builds on: Project 2</p>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You're a junior data analyst at a real estate agency</li>
+        <li>Agents ask: <strong>"Given a house with X square feet, what price should we list it at?"</strong></li>
+        <li>You have data from 50 recent sales: square footage and sale price</li>
+        <li>In Project 2 we learned to fit a line — now we focus on <strong>understanding the error</strong></li>
+        <li>Goal → fit a linear model, then deeply analyze the cost function, residuals, and what "good fit" really means</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Same linear regression setup as Project 2: <code>price = slope × sqft + intercept</code></li>
+        <li>But now we ask deeper questions:
+            <ul>
+                <li>What exactly is the cost function measuring?</li>
+                <li>What do the residuals (errors) look like?</li>
+                <li>How do we visualize "goodness of fit" beyond a single number?</li>
+            </ul>
+        </li>
+        <li>Plot the cost function landscape — see how MSE changes with different slopes</li>
+        <li>Plot residuals — they should look random if the model is appropriate</li>
+        <li>Introduce the concept of underfitting through residual patterns</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic house data (sqft → price with realistic noise)</li>
+        <li>Train/test split (Project 1 concept)</li>
+        <li>Fit linear regression (Project 2 concept)</li>
+        <li>Compute residuals: <code>residual = actual - predicted</code></li>
+        <li>Plot residuals vs predicted values — check for patterns</li>
+        <li>Plot the MSE cost surface by varying the slope — see the "bowl" shape</li>
+        <li>Compare prediction vs actual in a 45-degree line plot</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always plot residuals after fitting — they reveal problems the MSE number hides</li>
+        <li>✅ Residuals should be randomly scattered around zero — any pattern means the model is missing something</li>
+        <li>✅ Use a predicted-vs-actual plot — points should cluster around the 45° diagonal line</li>
+        <li>✅ Understand MSE as a landscape — OLS finds the bottom of the bowl</li>
+        <li>✅ Report RMSE in the target's units — "predictions are off by ~$X on average"</li>
+        <li>✅ Check if residuals grow with the input (heteroscedasticity) — this violates OLS assumptions</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT just report MSE and move on — the number alone doesn't tell you WHERE the model fails</li>
+        <li>❌ Do NOT ignore residual patterns — a U-shaped residual plot screams "nonlinear relationship"</li>
+        <li>❌ Do NOT assume low MSE means a good model — MSE depends on the scale of the target</li>
+        <li>❌ Do NOT forget to check if the linear assumption holds — plot first, model second</li>
+        <li>❌ Do NOT compare MSE across different datasets — MSE of $1000 on house prices vs $1000 on car prices means different things</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Residual plot</strong> → after EVERY regression model — it's the diagnostic X-ray</li>
+        <li>🔹 <strong>Predicted vs Actual plot</strong> → to visually assess overall model quality</li>
+        <li>🔹 <strong>Cost function visualization</strong> → when teaching/learning optimization concepts</li>
+        <li>🔹 <strong>RMSE over MSE</strong> → when communicating results to non-technical stakeholders (same units as target)</li>
+        <li>🔹 <strong>Scatter plot with fitted line</strong> → for single-feature regression (same as Project 2)</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 If residuals show a clear curve → linear model is wrong, need polynomial (Project 20) or other nonlinear model</li>
+        <li>🚫 If residuals fan out (grow larger for bigger predictions) → OLS assumptions violated, need transformation or weighted regression</li>
+        <li>🚫 If there are clusters in the residual plot → there might be hidden subgroups in the data</li>
+        <li>🚫 Cost function visualization doesn't scale beyond 2-3 parameters — useful for teaching, not for high-dimensional models</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The Cost Function (MSE) as a Landscape</h3>
+    <ul>
+        <li>For a single-feature linear model, MSE is a function of two parameters: slope and intercept</li>
+        <li>If you fix the intercept and vary the slope, MSE traces a <strong>parabola</strong> (U-shape)</li>
+        <li>The bottom of the parabola = the optimal slope = what OLS finds</li>
+        <li>With both parameters free, the cost surface is a 3D bowl — OLS finds the lowest point</li>
+    </ul>
+
+    <h3>Residuals — The Model's Confession</h3>
+    <ul>
+        <li>Residual = actual value − predicted value</li>
+        <li>Positive residual → model underestimated</li>
+        <li>Negative residual → model overestimated</li>
+        <li>If residuals are random (no pattern) → the model captured all the learnable signal</li>
+        <li>If residuals show a pattern → the model missed something systematic</li>
+    </ul>
+
+    <h3>Underfitting Signal in Residuals</h3>
+    <ul>
+        <li>A curved pattern in residuals means the true relationship is nonlinear</li>
+        <li>The linear model is too simple — it "underfits" the data</li>
+        <li>This connects to the bias-variance tradeoff (Project 8)</li>
+    </ul>
+
+    <h3>Predicted vs Actual Plot</h3>
+    <ul>
+        <li>Plot predicted (x-axis) vs actual (y-axis)</li>
+        <li>Perfect model → all points on the 45° diagonal</li>
+        <li>Spread around the diagonal = prediction error</li>
+        <li>Systematic deviation from diagonal = bias in the model</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Ignoring residual plots</strong> — the single most common beginner mistake in regression</li>
+        <li>⚠️ <strong>Confusing low MSE with good model</strong> — MSE of 100 is great for house prices ($100K scale) but terrible for exam scores (0-100 scale)</li>
+        <li>⚠️ <strong>Not checking for outliers in residuals</strong> — a few extreme residuals can inflate MSE dramatically</li>
+        <li>⚠️ <strong>Plotting residuals vs X instead of vs predicted</strong> — for simple regression they look similar, but for multiple regression (Project 9) only residuals vs predicted is correct</li>
+        <li>⚠️ <strong>Assuming residuals should be exactly zero</strong> — noise is expected; the goal is no PATTERN, not no error</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Residual computation is O(n) — trivial even for millions of rows</li>
+        <li>Plotting millions of residuals → use alpha transparency or hexbin plots</li>
+        <li>Cost function visualization is only practical for 1-2 parameters — not scalable to high dimensions</li>
+        <li>For large datasets, sample residuals for plotting (e.g., random 10,000 points)</li>
+        <li>The diagnostic concepts (residual analysis, predicted vs actual) scale to ANY regression model in later projects</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Residual plots make the model's failures visible — even non-technical people can see patterns</li>
+        <li>✅ Predicted vs actual plot is intuitive: "how close are we to perfect?"</li>
+        <li>✅ RMSE in dollars: "our predictions are off by about $15,000 on average" — actionable</li>
+        <li>✅ The cost function bowl visualization builds intuition for optimization (used in every ML algorithm)</li>
+        <li>⚠️ Residual analysis is a skill — it takes practice to distinguish real patterns from random noise</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Synthetic house data ───
+np.random.seed(42)
+sqft = np.random.uniform(600, 3000, size=50)
+# True relationship: price = 50 * sqft + 30000 + noise
+price = 50 * sqft + 30000 + np.random.normal(0, 15000, size=50)
+
+print("=== Sample Data (first 8 houses) ===")
+for i in range(8):
+    print(f"  House {i+1}: {sqft[i]:.0f} sqft → ${price[i]:,.0f}")
+
+# ─── Step 2: Train/Test Split ───
+X_train, y_train = sqft[:35], price[:35]
+X_test, y_test = sqft[35:], price[35:]
+print(f"\nTrain: {len(X_train)} houses | Test: {len(X_test)} houses")
+
+# ─── Step 3: Fit Linear Regression (Project 2 skill) ───
+model = LinearRegression()
+model.fit(X_train.reshape(-1, 1), y_train)
+print(f"\nModel: price = {model.coef_[0]:.2f} × sqft + {model.intercept_:,.2f}")
+
+# ─── Step 4: Predictions ───
+y_train_pred = model.predict(X_train.reshape(-1, 1))
+y_test_pred = model.predict(X_test.reshape(-1, 1))
+
+train_rmse = np.sqrt(mean_squared_error(y_train, y_train_pred))
+test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
+print(f"Train RMSE: ${train_rmse:,.0f}")
+print(f"Test RMSE:  ${test_rmse:,.0f}")
+
+# ─── Step 5: Residual Analysis ───
+train_residuals = y_train - y_train_pred
+test_residuals = y_test - y_test_pred
+
+print(f"\n=== Residual Statistics (Test Set) ===")
+print(f"  Mean residual:   ${np.mean(test_residuals):,.0f}  (should be near 0)")
+print(f"  Std of residuals: ${np.std(test_residuals):,.0f}")
+print(f"  Max overestimate: ${np.min(test_residuals):,.0f}")
+print(f"  Max underestimate: ${np.max(test_residuals):,.0f}")
+
+# ─── Step 6: Cost Function Landscape ───
+# Vary the slope while keeping intercept fixed → see how MSE changes
+slopes = np.linspace(0, 100, 200)
+mse_values = []
+for s in slopes:
+    preds = s * X_train + model.intercept_
+    mse_values.append(np.mean((y_train - preds) ** 2))
+
+# ─── Step 7: Four-Panel Diagnostic Plot ───
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+# Panel 1: Scatter + fitted line
+ax1 = axes[0, 0]
+ax1.scatter(X_train, y_train, color='#58a6ff', alpha=0.6, label='Train')
+ax1.scatter(X_test, y_test, color='#f0883e', alpha=0.6, label='Test')
+x_line = np.linspace(500, 3100, 100)
+ax1.plot(x_line, model.predict(x_line.reshape(-1, 1)), color='#3fb950', linewidth=2)
+ax1.set_xlabel('Square Footage')
+ax1.set_ylabel('Price ($)')
+ax1.set_title('Data + Fitted Line')
+ax1.legend()
+ax1.grid(True, alpha=0.2)
+
+# Panel 2: Residuals vs Predicted
+ax2 = axes[0, 1]
+ax2.scatter(y_train_pred, train_residuals, color='#58a6ff', alpha=0.6, label='Train')
+ax2.scatter(y_test_pred, test_residuals, color='#f0883e', alpha=0.6, label='Test')
+ax2.axhline(y=0, color='#3fb950', linestyle='--', linewidth=1)
+ax2.set_xlabel('Predicted Price ($)')
+ax2.set_ylabel('Residual ($)')
+ax2.set_title('Residuals vs Predicted (check for patterns)')
+ax2.legend()
+ax2.grid(True, alpha=0.2)
+
+# Panel 3: Predicted vs Actual
+ax3 = axes[1, 0]
+ax3.scatter(y_test_pred, y_test, color='#f0883e', alpha=0.7)
+min_val = min(y_test.min(), y_test_pred.min())
+max_val = max(y_test.max(), y_test_pred.max())
+ax3.plot([min_val, max_val], [min_val, max_val], color='#3fb950', linestyle='--', linewidth=2, label='Perfect prediction')
+ax3.set_xlabel('Predicted Price ($)')
+ax3.set_ylabel('Actual Price ($)')
+ax3.set_title('Predicted vs Actual (closer to diagonal = better)')
+ax3.legend()
+ax3.grid(True, alpha=0.2)
+
+# Panel 4: Cost Function Landscape
+ax4 = axes[1, 1]
+ax4.plot(slopes, mse_values, color='#bc8cff', linewidth=2)
+ax4.axvline(x=model.coef_[0], color='#f85149', linestyle='--', label=f'OLS slope={model.coef_[0]:.1f}')
+ax4.set_xlabel('Slope Value')
+ax4.set_ylabel('MSE')
+ax4.set_title('Cost Function — MSE vs Slope')
+ax4.legend()
+ax4.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_03_diagnostics.png', dpi=100, bbox_inches='tight')
+print("\n✅ Diagnostic plots saved as project_03_diagnostics.png")
+</code></pre>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>MSE is a cost function — OLS minimizes it, and you can visualize it as a bowl</li>
+        <li>Residuals are the model's confession — always plot them after fitting</li>
+        <li>Random residuals = good model; patterned residuals = model is missing something</li>
+        <li>Predicted vs actual plot gives an instant visual of model quality</li>
+        <li>These diagnostic tools apply to EVERY regression model you'll build in later projects</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 4</h3>
+    <ul>
+        <li>Projects 1-3 dealt with predicting numbers (regression) or simple binary outcomes</li>
+        <li>Project 4 returns to <strong>classification</strong> — but now with a proper decision threshold and confusion matrix</li>
+        <li>Instead of just accuracy (Project 1), we'll learn to measure <strong>true positives, false positives, true negatives, false negatives</strong></li>
+        <li>The confusion matrix is to classification what residual analysis is to regression — the diagnostic tool</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_02.html">← Project 2: Predicting a Student's Score</a>
+    <a href="project_04.html">Project 4: Classifying Spam vs Not-Spam →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

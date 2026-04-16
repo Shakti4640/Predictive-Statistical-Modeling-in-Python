@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 12 — Predicting Loan Default With a Decision Tree</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 2 — Easy</span>
+<h1>Project 12: Predicting Loan Default With a Decision Tree</h1>
+<p>
+    <span class="tag">Decision Tree</span>
+    <span class="tag">Gini impurity</span>
+    <span class="tag">entropy</span>
+    <span class="tag">max_depth</span>
+    <span class="tag">tree visualization</span>
+</p>
+<p class="difficulty">Difficulty: Easy &nbsp;|&nbsp; Builds on: Projects 7, 10</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You work at a bank's risk department</li>
+        <li>Loan officers ask: <strong>"Given an applicant's income, credit score, debt ratio, and employment years, will they default?"</strong></li>
+        <li>The bank needs EXPLAINABLE decisions — regulators require it</li>
+        <li>Logistic regression (Project 10) gives probabilities but the decision boundary is linear</li>
+        <li>Decision trees create IF-THEN rules that anyone can follow and audit</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>A decision tree splits the data into groups using yes/no questions</li>
+        <li>At each split, it picks the feature and threshold that best separates the classes</li>
+        <li>"Best" is measured by Gini impurity or entropy — both measure class mixing</li>
+        <li>The tree grows until it perfectly classifies training data (overfitting!) or hits a depth limit</li>
+        <li>max_depth is the key hyperparameter — controls the bias-variance tradeoff (Project 8)</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic loan applicant data</li>
+        <li>Fit a DecisionTreeClassifier with different max_depth values</li>
+        <li>Visualize the tree structure</li>
+        <li>Compare Gini vs entropy splitting criteria</li>
+        <li>Show overfitting with unlimited depth vs controlled depth</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Control tree depth with max_depth — unlimited trees overfit dramatically</li>
+        <li>✅ Visualize the tree — it's one of the few models you can literally draw</li>
+        <li>✅ Use feature_importances_ to see which features the tree relies on most</li>
+        <li>✅ Compare train vs test accuracy at different depths (Project 8 diagnostic)</li>
+        <li>✅ Decision trees don't need feature scaling — they only use thresholds, not distances</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use unlimited depth — the tree will memorize every training point</li>
+        <li>❌ Do NOT trust feature importance from a single tree — it's unstable (Random Forest in Project 21 fixes this)</li>
+        <li>❌ Do NOT expect smooth decision boundaries — trees create axis-aligned rectangular regions</li>
+        <li>❌ Do NOT use a single decision tree for critical applications — they're high variance (Project 21)</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Decision Tree</strong> → when interpretability is paramount (regulatory, medical)</li>
+        <li>🔹 <strong>Gini impurity</strong> → default, slightly faster to compute</li>
+        <li>🔹 <strong>Entropy</strong> → slightly different splits, often similar performance</li>
+        <li>🔹 <strong>max_depth=3-5</strong> → interpretable tree that fits on a page</li>
+        <li>🔹 <strong>Feature importance</strong> → quick feature ranking (but use with caution)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Single trees are unstable — small data changes can produce completely different trees</li>
+        <li>🚫 Trees can't extrapolate — they predict within the range of training data only</li>
+        <li>🚫 Axis-aligned splits struggle with diagonal decision boundaries</li>
+        <li>🚫 For best accuracy, use ensembles of trees (Random Forest Project 21, Gradient Boosting Project 23)</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Gini Impurity</h3>
+    <ul>
+        <li><code>Gini = 1 - Σ(pᵢ²)</code> where pᵢ = proportion of class i in the node</li>
+        <li>Gini = 0 → pure node (all one class)</li>
+        <li>Gini = 0.5 → maximum impurity for binary (50/50 split)</li>
+        <li>The tree picks the split that reduces Gini the most</li>
+    </ul>
+
+    <h3>Entropy</h3>
+    <ul>
+        <li><code>Entropy = -Σ(pᵢ × log₂(pᵢ))</code></li>
+        <li>Entropy = 0 → pure node</li>
+        <li>Entropy = 1 → maximum uncertainty for binary</li>
+        <li>Information Gain = parent entropy - weighted child entropy</li>
+    </ul>
+
+    <h3>How the Tree Grows</h3>
+    <ol>
+        <li>Start with all data at the root</li>
+        <li>For each feature, try every possible threshold</li>
+        <li>Pick the (feature, threshold) pair that maximizes impurity reduction</li>
+        <li>Split the data into two child nodes</li>
+        <li>Repeat recursively until stopping criteria (max_depth, min_samples, pure nodes)</li>
+    </ol>
+
+    <h3>max_depth as Bias-Variance Control</h3>
+    <ul>
+        <li>depth=1 → "decision stump" — one split, high bias, low variance</li>
+        <li>depth=∞ → fully grown tree — low bias, high variance (overfits)</li>
+        <li>Optimal depth is found via validation (Project 8) or cross-validation (Project 15)</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Unlimited depth</strong> — tree memorizes training data, 100% train accuracy, poor test accuracy</li>
+        <li>⚠️ <strong>Instability</strong> — removing one training point can change the entire tree structure</li>
+        <li>⚠️ <strong>Biased toward features with many unique values</strong> — continuous features get more split opportunities</li>
+        <li>⚠️ <strong>Overly complex trees are uninterpretable</strong> — a tree with 50 levels defeats the purpose</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Training: O(n × p × log n) per split — fast for moderate data</li>
+        <li>Prediction: O(depth) per sample — very fast</li>
+        <li>No feature scaling needed — saves preprocessing time</li>
+        <li>Memory: stores the tree structure, not the data — compact</li>
+        <li>For large datasets, consider histogram-based trees (LightGBM, Project 31)</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ The most interpretable ML model — literally a flowchart</li>
+        <li>✅ Each prediction can be traced through the tree: "income &gt; $50K AND credit &gt; 700 → low risk"</li>
+        <li>✅ Feature importance shows which features drive decisions</li>
+        <li>✅ Regulators and auditors can inspect every decision path</li>
+        <li>⚠️ Deep trees lose interpretability — keep depth ≤ 5 for human readability</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score
+
+# ─── Step 1: Synthetic loan data ───
+np.random.seed(42)
+n = 500
+
+income = np.random.uniform(20000, 150000, n)
+credit_score = np.random.uniform(300, 850, n)
+debt_ratio = np.random.uniform(0, 0.8, n)
+employment_years = np.random.uniform(0, 30, n)
+
+# Default probability depends on features
+log_odds = (-3
+            - 0.00003 * income
+            - 0.005 * credit_score
+            + 4 * debt_ratio
+            - 0.05 * employment_years
+            + np.random.normal(0, 0.5, n))
+prob = 1 / (1 + np.exp(-log_odds))
+default = (np.random.random(n) < prob).astype(int)
+
+df = pd.DataFrame({
+    'income': income, 'credit_score': credit_score,
+    'debt_ratio': debt_ratio, 'employment_years': employment_years,
+    'default': default
+})
+
+print(f"=== Data Summary ===")
+print(f"  Applicants: {n} | Defaults: {default.sum()} ({default.mean():.1%})")
+
+# ─── Step 2: Split ───
+features = ['income', 'credit_score', 'debt_ratio', 'employment_years']
+X = df[features].values
+y = df['default'].values
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# ─── Step 3: Compare different max_depth values ───
+print(f"\n=== Depth Comparison (Bias-Variance from Project 8) ===")
+print(f"{'Depth':>6} {'Train Acc':>10} {'Test Acc':>10} {'Gap':>8} {'Nodes':>7}")
+print("-" * 45)
+
+for depth in [1, 2, 3, 5, 10, None]:
+    tree = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    tree.fit(X_train, y_train)
+    train_acc = tree.score(X_train, y_train)
+    test_acc = tree.score(X_test, y_test)
+    n_nodes = tree.tree_.node_count
+    depth_str = str(depth) if depth else "None"
+    print(f"{depth_str:>6} {train_acc:>10.2%} {test_acc:>10.2%} "
+          f"{train_acc-test_acc:>+8.2%} {n_nodes:>7}")
+
+# ─── Step 4: Best model (depth=3 for interpretability) ───
+best_tree = DecisionTreeClassifier(max_depth=3, random_state=42)
+best_tree.fit(X_train, y_train)
+y_pred = best_tree.predict(X_test)
+
+print(f"\n=== Tree Structure (max_depth=3) ===")
+tree_text = export_text(best_tree, feature_names=features, max_depth=3)
+print(tree_text)
+
+# ─── Step 5: Feature Importance ───
+print(f"=== Feature Importance ===")
+for feat, imp in sorted(zip(features, best_tree.feature_importances_),
+                         key=lambda x: -x[1]):
+    bar = "█" * int(imp * 40)
+    print(f"  {feat:>18}: {imp:.4f} {bar}")
+
+# ─── Step 6: Classification Report ───
+print(f"\n=== Classification Report ===")
+print(classification_report(y_test, y_pred, target_names=['No Default', 'Default']))
+
+# ─── Step 7: Gini vs Entropy comparison ───
+print(f"=== Gini vs Entropy ===")
+for criterion in ['gini', 'entropy']:
+    tree_c = DecisionTreeClassifier(max_depth=3, criterion=criterion, random_state=42)
+    tree_c.fit(X_train, y_train)
+    acc = tree_c.score(X_test, y_test)
+    print(f"  {criterion:>8}: Test Accuracy={acc:.2%}")
+
+# ─── Step 8: Trace a prediction ───
+print(f"\n=== Tracing a Prediction ===")
+sample = X_test[0]
+pred = best_tree.predict([sample])[0]
+prob = best_tree.predict_proba([sample])[0]
+print(f"  Applicant: income=${sample[0]:,.0f}, credit={sample[1]:.0f}, "
+      f"debt_ratio={sample[2]:.2f}, years={sample[3]:.1f}")
+print(f"  Prediction: {'Default' if pred else 'No Default'} "
+      f"(confidence: {max(prob):.1%})")
+print(f"  Follow the tree above to trace this decision!")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Decision trees create IF-THEN rules — the most interpretable ML model</li>
+        <li>Gini impurity and entropy measure class mixing — the tree minimizes these at each split</li>
+        <li>max_depth controls overfitting — unlimited depth = memorization</li>
+        <li>Trees don't need feature scaling — they only use thresholds</li>
+        <li>Single trees are unstable — ensembles (Project 21) fix this</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 13</h3>
+    <ul>
+        <li>KNN (Project 11) REQUIRED scaling; Decision Trees did NOT</li>
+        <li>When should you scale? When shouldn't you? What scaling method should you use?</li>
+        <li>Project 13 dives deep into <strong>feature scaling and normalization</strong></li>
+        <li>We'll compare StandardScaler, MinMaxScaler, and RobustScaler — and see how each affects model performance</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_11.html">← Project 11: Classifying Iris Flowers — KNN</a>
+    <a href="project_13.html">Project 13: Scaling and Normalizing Features →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

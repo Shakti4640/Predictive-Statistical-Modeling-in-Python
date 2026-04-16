@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 56 — Model Monitoring in Production — Detecting Data Drift</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 56: Model Monitoring in Production — Detecting Data Drift</h1>
+<p>
+    <span class="tag">Data Drift</span>
+    <span class="tag">Covariate Shift</span>
+    <span class="tag">PSI</span>
+    <span class="tag">Evidently AI</span>
+    <span class="tag">Retraining Trigger</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 52, 55</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A fintech company deployed a credit scoring model 6 months ago with 92% accuracy on the validation set</li>
+        <li>Over the past 3 months, the model's accuracy has silently dropped to 84% — but nobody noticed until customer complaints spiked</li>
+        <li>The root cause: economic conditions changed — interest rates rose, unemployment shifted, and the income distribution of applicants changed significantly</li>
+        <li>The model was trained on pre-change data, but the production input distribution has drifted — this is <strong>covariate shift</strong></li>
+        <li>Goal → build a monitoring system that detects data drift in real time and triggers retraining alerts before accuracy degrades</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 52: we learned to deploy models — but deployment without monitoring is a ticking time bomb</li>
+        <li>From Project 55: we built pipelines — now we need to add monitoring as a pipeline stage</li>
+        <li>Data drift means the distribution P(X) changes between training and production — even if P(Y|X) stays the same, predictions degrade</li>
+        <li>We need statistical tests to compare training vs. production feature distributions</li>
+        <li>Population Stability Index (PSI) is the industry standard for drift detection in credit scoring</li>
+        <li>The Kolmogorov-Smirnov (KS) test provides a per-feature statistical test for distribution changes</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Simulate a credit scoring dataset with realistic feature distributions (income, age, debt ratio, credit history)</li>
+        <li>Train a baseline model on the "original" distribution</li>
+        <li>Simulate data drift by gradually shifting feature distributions over time (e.g., income drops, debt ratio increases)</li>
+        <li>Implement Population Stability Index (PSI) from scratch to measure overall distribution shift</li>
+        <li>Use the Kolmogorov-Smirnov test to detect per-feature drift with statistical significance</li>
+        <li>Build a monitoring dashboard that tracks drift metrics over time and triggers retraining alerts when thresholds are exceeded</li>
+        <li>Show how model accuracy correlates with drift magnitude</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Monitor ALL input features, not just model output — drift in inputs is the leading indicator</li>
+        <li>✅ Set PSI thresholds: &lt; 0.1 = no drift, 0.1–0.25 = moderate drift, &gt; 0.25 = significant drift requiring action</li>
+        <li>✅ Use multiple drift detection methods — PSI for overall shift, KS test for per-feature significance</li>
+        <li>✅ Track drift over time with rolling windows — a single snapshot can be misleading</li>
+        <li>✅ Automate retraining triggers — don't rely on humans to notice degradation</li>
+        <li>✅ Monitor prediction distribution too — if the model suddenly predicts 90% "approve", something is wrong</li>
+        <li>✅ Keep a reference dataset (training data summary) for comparison — you need a baseline</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT deploy a model without monitoring — "deploy and forget" is the #1 cause of ML system failures</li>
+        <li>❌ Do NOT only monitor accuracy — you often don't have ground truth labels in real time</li>
+        <li>❌ Do NOT use a single metric — PSI alone misses feature-level drift; KS alone misses multivariate shifts</li>
+        <li>❌ Do NOT set thresholds too sensitive — you'll get alert fatigue from false positives</li>
+        <li>❌ Do NOT retrain on drifted data without understanding WHY it drifted — the drift might be a data pipeline bug, not a real-world change</li>
+        <li>❌ Do NOT compare against stale reference data — update your reference periodically after confirmed retraining</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>PSI (Population Stability Index)</strong> → industry standard for credit scoring; good for continuous features binned into deciles</li>
+        <li>🔹 <strong>KS Test (Kolmogorov-Smirnov)</strong> → per-feature statistical test; gives p-values for significance</li>
+        <li>🔹 <strong>Jensen-Shannon Divergence</strong> → symmetric version of KL divergence; works for any distribution comparison</li>
+        <li>🔹 <strong>Chi-Square Test</strong> → for categorical features; compares observed vs. expected frequencies</li>
+        <li>🔹 <strong>Wasserstein Distance</strong> → "earth mover's distance"; captures the magnitude of shift, not just presence</li>
+        <li>🔹 <strong>Multivariate Drift Detection</strong> → when features shift together; use domain classifier approach</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Don't use PSI on very small samples (&lt; 200) — the binning becomes unreliable</li>
+        <li>🚫 Don't use KS test on categorical features — it assumes continuous distributions</li>
+        <li>🚫 Don't rely solely on statistical tests when you have ground truth labels — direct accuracy monitoring is better</li>
+        <li>🚫 Don't use drift detection as a substitute for proper data validation — garbage data isn't "drift"</li>
+        <li>🚫 Don't apply the same thresholds across all features — some features naturally vary more than others</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Population Stability Index (PSI)</h3>
+    <ul>
+        <li>PSI measures how much a distribution has shifted from a reference (training) distribution</li>
+        <li>Step 1: Bin the reference distribution into N buckets (typically 10 deciles)</li>
+        <li>Step 2: Calculate the percentage of observations in each bucket for both reference and production</li>
+        <li>Step 3: PSI = Σ (P_production_i - P_reference_i) × ln(P_production_i / P_reference_i)</li>
+        <li>PSI is asymmetric — it measures how much production has shifted FROM the reference</li>
+        <li>Interpretation: PSI &lt; 0.1 → stable; 0.1–0.25 → moderate shift; &gt; 0.25 → significant shift</li>
+    </ul>
+
+    <h3>Kolmogorov-Smirnov Test</h3>
+    <ul>
+        <li>KS test compares two empirical CDFs and finds the maximum absolute difference</li>
+        <li>KS statistic = max|F_reference(x) - F_production(x)|</li>
+        <li>Returns a p-value — if p &lt; 0.05, the distributions are statistically different</li>
+        <li>Advantage: non-parametric, no binning required, works on any continuous distribution</li>
+        <li>Limitation: sensitive to sample size — large samples detect tiny, irrelevant differences</li>
+    </ul>
+
+    <h3>Covariate Shift vs. Concept Drift</h3>
+    <ul>
+        <li>Covariate shift: P(X) changes but P(Y|X) stays the same — the input distribution shifts</li>
+        <li>Concept drift: P(Y|X) changes — the relationship between features and target changes</li>
+        <li>Both degrade model performance, but they require different responses</li>
+        <li>Covariate shift → retrain on new data distribution; Concept drift → may need a new model architecture</li>
+    </ul>
+
+    <h3>Monitoring Architecture</h3>
+    <ul>
+        <li>Reference window: a snapshot of the training data distribution (stored as histograms/statistics)</li>
+        <li>Production window: rolling window of recent production data (e.g., last 7 days)</li>
+        <li>Comparison: compute drift metrics between reference and production windows at regular intervals</li>
+        <li>Alerting: trigger retraining when drift exceeds thresholds for sustained periods</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Alert fatigue</strong> — setting thresholds too low triggers constant false alarms; teams start ignoring alerts</li>
+        <li>⚠️ <strong>Confusing data bugs with drift</strong> — a broken ETL pipeline that sends nulls looks like drift but isn't</li>
+        <li>⚠️ <strong>Ignoring multivariate drift</strong> — individual features may look stable, but their correlations change</li>
+        <li>⚠️ <strong>Seasonal patterns misread as drift</strong> — holiday spending patterns aren't drift; they're expected variation</li>
+        <li>⚠️ <strong>Stale reference data</strong> — if you never update the reference after retraining, you'll always detect "drift"</li>
+        <li>⚠️ <strong>No ground truth delay accounting</strong> — in credit scoring, you don't know if a loan defaults for 6+ months</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>PSI computation is O(n) per feature — very fast even on millions of records</li>
+        <li>KS test is O(n log n) due to sorting — still fast for production use</li>
+        <li>Store reference distributions as histograms/quantiles, not raw data — reduces storage from GB to KB</li>
+        <li>Use streaming statistics (online mean, variance, quantiles) for real-time monitoring</li>
+        <li>For high-dimensional data, monitor the most important features first (use feature importance from the model)</li>
+        <li>Batch monitoring (daily/weekly) is sufficient for most use cases — real-time monitoring adds complexity</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ PSI is intuitive — "the income distribution shifted by 0.3, which is significant"</li>
+        <li>✅ Per-feature drift reports tell stakeholders exactly WHICH inputs changed</li>
+        <li>✅ Drift visualizations (overlaid histograms) are easy for non-technical audiences to understand</li>
+        <li>⚠️ Statistical test p-values can be misleading — "statistically significant" doesn't mean "practically important"</li>
+        <li>⚠️ Multivariate drift is harder to explain — "the correlation between income and age changed" is abstract</li>
+        <li>✅ Combine drift metrics with business metrics — "drift of 0.3 PSI correlated with 8% accuracy drop"</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from scipy import stats
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, roc_auc_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 1: Generate Credit Scoring Dataset (Reference Period)
+# ═══════════════════════════════════════════════════════════════
+def generate_credit_data(n_samples, income_mean=50000, income_std=15000,
+                         age_mean=40, debt_ratio_mean=0.3, drift_factor=0.0):
+    """Generate synthetic credit scoring data with optional drift."""
+    income = np.random.normal(income_mean * (1 - 0.2 * drift_factor),
+                              income_std * (1 + 0.1 * drift_factor), n_samples)
+    income = np.clip(income, 10000, 200000)
+
+    age = np.random.normal(age_mean - 2 * drift_factor, 10, n_samples)
+    age = np.clip(age, 18, 80).astype(int)
+
+    debt_ratio = np.random.beta(2 + drift_factor, 5 - drift_factor * 0.5, n_samples)
+    debt_ratio = np.clip(debt_ratio, 0, 1)
+
+    credit_history = np.random.normal(650 - 20 * drift_factor, 80, n_samples)
+    credit_history = np.clip(credit_history, 300, 850).astype(int)
+
+    num_accounts = np.random.poisson(3 + drift_factor, n_samples)
+
+    # Target: probability of default
+    log_odds = (-3 + 0.00002 * (80000 - income) + 0.02 * (age - 40)
+                + 3 * (debt_ratio - 0.3) + 0.005 * (650 - credit_history)
+                + 0.1 * (num_accounts - 3))
+    prob_default = 1 / (1 + np.exp(-log_odds))
+    default = (np.random.random(n_samples) < prob_default).astype(int)
+
+    return pd.DataFrame({
+        'income': income, 'age': age, 'debt_ratio': debt_ratio,
+        'credit_history': credit_history, 'num_accounts': num_accounts,
+        'default': default
+    })
+
+# Reference data (training period)
+df_reference = generate_credit_data(5000, drift_factor=0.0)
+X_ref = df_reference.drop('default', axis=1)
+y_ref = df_reference['default']
+
+X_train, X_val, y_train, y_val = train_test_split(X_ref, y_ref, test_size=0.2, random_state=42)
+
+# Train baseline model
+model = GradientBoostingClassifier(n_estimators=100, max_depth=4, random_state=42)
+model.fit(X_train, y_train)
+baseline_acc = accuracy_score(y_val, model.predict(X_val))
+baseline_auc = roc_auc_score(y_val, model.predict_proba(X_val)[:, 1])
+print(f"=== Baseline Model Performance ===")
+print(f"  Validation Accuracy: {baseline_acc:.4f}")
+print(f"  Validation AUC: {baseline_auc:.4f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 2: Implement PSI From Scratch
+# ═══════════════════════════════════════════════════════════════
+def calculate_psi(reference, production, n_bins=10):
+    """Calculate Population Stability Index between two distributions."""
+    # Create bins from reference distribution
+    breakpoints = np.percentile(reference, np.linspace(0, 100, n_bins + 1))
+    breakpoints[0] = -np.inf
+    breakpoints[-1] = np.inf
+    # Remove duplicate breakpoints
+    breakpoints = np.unique(breakpoints)
+
+    # Calculate proportions in each bin
+    ref_counts = np.histogram(reference, bins=breakpoints)[0]
+    prod_counts = np.histogram(production, bins=breakpoints)[0]
+
+    # Convert to proportions (add small epsilon to avoid division by zero)
+    eps = 1e-4
+    ref_pct = ref_counts / len(reference) + eps
+    prod_pct = prod_counts / len(production) + eps
+
+    # Normalize to sum to 1
+    ref_pct = ref_pct / ref_pct.sum()
+    prod_pct = prod_pct / prod_pct.sum()
+
+    # PSI formula
+    psi = np.sum((prod_pct - ref_pct) * np.log(prod_pct / ref_pct))
+    return psi
+
+print(f"\n=== PSI Implementation Test ===")
+# Test with identical distributions
+same_data = np.random.normal(0, 1, 5000)
+psi_same = calculate_psi(same_data, np.random.normal(0, 1, 5000))
+print(f"  PSI (same distribution): {psi_same:.4f} — should be near 0")
+
+# Test with shifted distribution
+psi_shifted = calculate_psi(same_data, np.random.normal(0.5, 1.2, 5000))
+print(f"  PSI (shifted distribution): {psi_shifted:.4f} — should be > 0.1")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 3: Simulate Drift Over Time (6 Monthly Windows)
+# ═══════════════════════════════════════════════════════════════
+drift_factors = [0.0, 0.2, 0.5, 1.0, 1.5, 2.0]
+months = ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6']
+features = ['income', 'age', 'debt_ratio', 'credit_history', 'num_accounts']
+
+results = []
+print(f"\n=== Drift Simulation Over 6 Months ===")
+print(f"  {'Month':<10} {'Accuracy':>10} {'AUC':>8} {'PSI_income':>12} {'PSI_debt':>10} {'Alert':>8}")
+print(f"  {'-'*58}")
+
+for i, drift in enumerate(drift_factors):
+    df_prod = generate_credit_data(1000, drift_factor=drift)
+    X_prod = df_prod.drop('default', axis=1)
+    y_prod = df_prod['default']
+
+    # Model performance on drifted data
+    acc = accuracy_score(y_prod, model.predict(X_prod))
+    auc = roc_auc_score(y_prod, model.predict_proba(X_prod)[:, 1])
+
+    # Calculate PSI for each feature
+    psi_values = {}
+    for feat in features:
+        psi_values[feat] = calculate_psi(X_ref[feat].values, X_prod[feat].values)
+
+    # KS test for each feature
+    ks_results = {}
+    for feat in features:
+        ks_stat, ks_pval = stats.ks_2samp(X_ref[feat].values, X_prod[feat].values)
+        ks_results[feat] = {'statistic': ks_stat, 'p_value': ks_pval}
+
+    # Alert logic
+    max_psi = max(psi_values.values())
+    alert = "🔴 ALERT" if max_psi > 0.25 else ("🟡 WARN" if max_psi > 0.1 else "🟢 OK")
+
+    results.append({
+        'month': months[i], 'drift_factor': drift, 'accuracy': acc, 'auc': auc,
+        'psi': psi_values, 'ks': ks_results, 'alert': alert, 'max_psi': max_psi
+    })
+
+    print(f"  {months[i]:<10} {acc:>10.4f} {auc:>8.4f} {psi_values['income']:>12.4f} "
+          f"{psi_values['debt_ratio']:>10.4f} {alert:>8}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: Detailed KS Test Results for Most Drifted Month
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== KS Test Results — Month 6 (Heaviest Drift) ===")
+last = results[-1]
+print(f"  {'Feature':<18} {'KS Stat':>10} {'p-value':>12} {'Significant':>12}")
+print(f"  {'-'*54}")
+for feat in features:
+    ks = last['ks'][feat]
+    sig = "YES ⚠️" if ks['p_value'] < 0.05 else "no"
+    print(f"  {feat:<18} {ks['statistic']:>10.4f} {ks['p_value']:>12.6f} {sig:>12}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 5: Retraining Trigger Logic
+# ═══════════════════════════════════════════════════════════════
+print(f"\n=== Retraining Trigger Analysis ===")
+psi_threshold = 0.25
+consecutive_alerts = 0
+trigger_month = None
+
+for r in results:
+    if r['max_psi'] > psi_threshold:
+        consecutive_alerts += 1
+        if consecutive_alerts >= 2 and trigger_month is None:
+            trigger_month = r['month']
+    else:
+        consecutive_alerts = 0
+
+if trigger_month:
+    print(f"  ⚡ Retraining triggered at: {trigger_month}")
+    print(f"  Reason: PSI exceeded {psi_threshold} for 2 consecutive months")
+else:
+    print(f"  ✅ No retraining needed — drift within acceptable bounds")
+
+# Show accuracy recovery after retraining
+df_retrain = generate_credit_data(5000, drift_factor=1.5)
+X_retrain = df_retrain.drop('default', axis=1)
+y_retrain = df_retrain['default']
+model_retrained = GradientBoostingClassifier(n_estimators=100, max_depth=4, random_state=42)
+model_retrained.fit(X_retrain, y_retrain)
+
+df_test_new = generate_credit_data(1000, drift_factor=2.0)
+X_test_new = df_test_new.drop('default', axis=1)
+y_test_new = df_test_new['default']
+
+acc_old = accuracy_score(y_test_new, model.predict(X_test_new))
+acc_new = accuracy_score(y_test_new, model_retrained.predict(X_test_new))
+print(f"\n  Performance on latest data:")
+print(f"    Old model accuracy: {acc_old:.4f}")
+print(f"    Retrained model accuracy: {acc_new:.4f}")
+print(f"    Improvement: +{acc_new - acc_old:.4f}")
+
+# ═══════════════════════════════════════════════════════════════
+# STEP 6: Visualization Dashboard
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+fig.suptitle('Model Monitoring Dashboard — Data Drift Detection', fontsize=16, color='white')
+
+# Plot 1: Accuracy over time
+ax = axes[0, 0]
+accs = [r['accuracy'] for r in results]
+ax.plot(months, accs, 'o-', color='#58a6ff', linewidth=2, markersize=8)
+ax.axhline(y=baseline_acc, color='#3fb950', linestyle='--', alpha=0.7, label=f'Baseline ({baseline_acc:.2f})')
+ax.axhline(y=0.85, color='#f85149', linestyle='--', alpha=0.7, label='Alert threshold')
+ax.set_ylabel('Accuracy')
+ax.set_title('Model Accuracy Over Time')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+ax.tick_params(axis='x', rotation=45)
+
+# Plot 2: PSI over time for key features
+ax = axes[0, 1]
+for feat in ['income', 'debt_ratio', 'credit_history']:
+    psis = [r['psi'][feat] for r in results]
+    ax.plot(months, psis, 'o-', linewidth=2, markersize=6, label=feat)
+ax.axhline(y=0.1, color='#f0883e', linestyle='--', alpha=0.7, label='Moderate drift')
+ax.axhline(y=0.25, color='#f85149', linestyle='--', alpha=0.7, label='Significant drift')
+ax.set_ylabel('PSI')
+ax.set_title('Feature PSI Over Time')
+ax.legend(fontsize=7)
+ax.grid(True, alpha=0.2)
+ax.tick_params(axis='x', rotation=45)
+
+# Plot 3: Income distribution shift
+ax = axes[0, 2]
+ax.hist(X_ref['income'], bins=30, alpha=0.5, color='#58a6ff', label='Reference', density=True)
+df_drifted = generate_credit_data(5000, drift_factor=2.0)
+ax.hist(df_drifted['income'], bins=30, alpha=0.5, color='#f85149', label='Month 6', density=True)
+ax.set_xlabel('Income')
+ax.set_title('Income Distribution Shift')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Plot 4: Debt ratio distribution shift
+ax = axes[1, 0]
+ax.hist(X_ref['debt_ratio'], bins=30, alpha=0.5, color='#58a6ff', label='Reference', density=True)
+ax.hist(df_drifted['debt_ratio'], bins=30, alpha=0.5, color='#f85149', label='Month 6', density=True)
+ax.set_xlabel('Debt Ratio')
+ax.set_title('Debt Ratio Distribution Shift')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Plot 5: Accuracy vs Max PSI correlation
+ax = axes[1, 1]
+max_psis = [r['max_psi'] for r in results]
+ax.scatter(max_psis, accs, color='#f0883e', s=100, zorder=5)
+for i, m in enumerate(months):
+    ax.annotate(m, (max_psis[i], accs[i]), fontsize=8, ha='left', va='bottom', color='white')
+ax.set_xlabel('Max Feature PSI')
+ax.set_ylabel('Accuracy')
+ax.set_title('Accuracy vs. Drift Magnitude')
+ax.grid(True, alpha=0.2)
+
+# Plot 6: KS test heatmap
+ax = axes[1, 2]
+ks_matrix = np.zeros((len(months), len(features)))
+for i, r in enumerate(results):
+    for j, feat in enumerate(features):
+        ks_matrix[i, j] = r['ks'][feat]['statistic']
+im = ax.imshow(ks_matrix.T, aspect='auto', cmap='YlOrRd')
+ax.set_xticks(range(len(months)))
+ax.set_xticklabels(months, rotation=45, fontsize=8)
+ax.set_yticks(range(len(features)))
+ax.set_yticklabels(features, fontsize=8)
+ax.set_title('KS Statistic Heatmap')
+plt.colorbar(im, ax=ax, shrink=0.8)
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_56_drift_monitoring.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ Monitoring dashboard saved as project_56_drift_monitoring.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Deploying a model without monitoring is like flying blind — data drift silently degrades performance</li>
+        <li>PSI is the industry standard for drift detection: &lt; 0.1 stable, 0.1–0.25 moderate, &gt; 0.25 significant</li>
+        <li>KS tests provide per-feature statistical significance — but beware of large-sample sensitivity</li>
+        <li>Combine multiple drift metrics with business metrics for robust alerting</li>
+        <li>Automate retraining triggers — but always investigate the root cause before retraining</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 57</h3>
+    <ul>
+        <li>We've built monitoring for a single deployed model — but what if the training data itself can't be centralized?</li>
+        <li>Project 57 tackles <strong>federated learning</strong> — training models across private data silos without sharing raw data</li>
+        <li>Three hospitals want to build a shared disease prediction model, but privacy regulations prevent data sharing</li>
+        <li>We'll simulate the FedAvg algorithm and compare federated vs. centralized vs. local-only performance</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_55.html">← Project 55: ML Pipeline Orchestration</a>
+    <a href="project_57.html">Project 57: Federated Learning Simulation →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

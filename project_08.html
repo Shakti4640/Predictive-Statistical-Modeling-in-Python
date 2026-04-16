@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 8 — Diagnosing a Model — Is It Learning or Memorizing?</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --heading: #58a6ff;
+            --accent: #f0883e;
+            --green: #3fb950;
+            --red: #f85149;
+            --purple: #bc8cff;
+            --code-bg: #0d1117;
+            --link: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 1 — Very Easy</span>
+<h1>Project 8: Diagnosing a Model — Is It Learning or Memorizing?</h1>
+<p>
+    <span class="tag">Overfitting vs underfitting</span>
+    <span class="tag">bias-variance tradeoff</span>
+    <span class="tag">learning curves</span>
+    <span class="tag">validation set</span>
+</p>
+<p class="difficulty">Difficulty: Very Easy &nbsp;|&nbsp; Builds on: Projects 2–7</p>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>You've built several models in Projects 1-7 — some worked well, some didn't</li>
+        <li>Your manager asks: <strong>"How do I know if this model will work on NEW data we haven't seen yet?"</strong></li>
+        <li>A model that scores 99% on training data but 60% on test data is MEMORIZING, not learning</li>
+        <li>A model that scores 55% on both training and test data is too SIMPLE — it's not capturing the pattern</li>
+        <li>Goal → learn to diagnose these two failure modes and understand the fundamental tradeoff</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>Create a dataset where we can control complexity</li>
+        <li>Fit models of increasing complexity (polynomial degree 1, 3, 10, 20)</li>
+        <li>Track training error AND validation error for each complexity level</li>
+        <li>Plot learning curves: error vs training set size</li>
+        <li>Identify the sweet spot between underfitting and overfitting</li>
+        <li>Introduce the validation set as a tool for model selection</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate data with a known nonlinear pattern</li>
+        <li>Split into train / validation / test (three-way split)</li>
+        <li>Fit polynomial models of degree 1, 3, 10, 20</li>
+        <li>Compare train vs validation error for each</li>
+        <li>Plot learning curves using sklearn's <code>learning_curve()</code></li>
+        <li>Diagnose: which model underfits? Which overfits? Which is just right?</li>
+    </ol>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Always compare training error vs validation/test error — the GAP tells the story</li>
+        <li>✅ Use a validation set for model selection, test set for final evaluation only</li>
+        <li>✅ Plot learning curves — they show if more data would help</li>
+        <li>✅ Start simple, increase complexity gradually — don't jump to the most complex model</li>
+        <li>✅ Understand that some error is irreducible (noise in the data)</li>
+        <li>✅ Use this diagnostic framework for EVERY model in future projects</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use the test set for model selection — that's data leakage</li>
+        <li>❌ Do NOT celebrate high training accuracy — it means nothing without validation accuracy</li>
+        <li>❌ Do NOT assume more complex = better — complexity without data leads to overfitting</li>
+        <li>❌ Do NOT ignore the gap between train and validation error — it's the overfitting signal</li>
+        <li>❌ Do NOT use the same data for training, validation, AND testing — each has a distinct role</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Learning curves</strong> → to diagnose if the model needs more data or more complexity</li>
+        <li>🔹 <strong>Validation set</strong> → for choosing between models (hyperparameter tuning, model selection)</li>
+        <li>🔹 <strong>Test set</strong> → for final, unbiased performance estimate (use ONCE)</li>
+        <li>🔹 <strong>Train/val error gap</strong> → large gap = overfitting, both high = underfitting</li>
+        <li>🔹 <strong>Simpler model</strong> → when you have limited data or need interpretability</li>
+        <li>🔹 <strong>More complex model</strong> → when you have lots of data and the simple model underfits</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Learning curves are less useful with very small datasets (&lt;50 samples) — too noisy</li>
+        <li>🚫 A single train/val split can be unreliable — cross-validation (Project 15) is more robust</li>
+        <li>🚫 The bias-variance tradeoff doesn't tell you WHICH model to use — only whether to go simpler or more complex</li>
+        <li>🚫 Overfitting diagnosis doesn't help if the features are fundamentally uninformative</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>Overfitting — The Model Memorizes</h3>
+    <ul>
+        <li>The model fits the training data TOO well — including the noise</li>
+        <li>Training error: very low (near zero)</li>
+        <li>Validation error: much higher than training error</li>
+        <li>The model has learned patterns that don't generalize</li>
+        <li>Analogy: memorizing exam answers vs understanding the subject</li>
+    </ul>
+
+    <h3>Underfitting — The Model Is Too Simple</h3>
+    <ul>
+        <li>The model can't capture the underlying pattern</li>
+        <li>Training error: high</li>
+        <li>Validation error: also high (and close to training error)</li>
+        <li>The model is too constrained to learn the relationship</li>
+        <li>Analogy: trying to draw a curve with a straight ruler</li>
+    </ul>
+
+    <h3>Bias-Variance Tradeoff</h3>
+    <ul>
+        <li><strong>Bias</strong> = error from wrong assumptions (underfitting) → model is too simple</li>
+        <li><strong>Variance</strong> = error from sensitivity to training data (overfitting) → model is too complex</li>
+        <li>Total error = Bias² + Variance + Irreducible noise</li>
+        <li>As complexity increases: bias decreases, variance increases</li>
+        <li>The sweet spot minimizes total error</li>
+    </ul>
+
+    <h3>Learning Curves — What They Tell You</h3>
+    <ul>
+        <li>Plot training error and validation error vs training set size</li>
+        <li>Underfitting: both curves plateau at a HIGH error → more data won't help, need more complexity</li>
+        <li>Overfitting: training error is low, validation error is high → more data WILL help</li>
+        <li>Good fit: both curves converge at a LOW error</li>
+    </ul>
+
+    <h3>Three-Way Split: Train / Validation / Test</h3>
+    <ul>
+        <li>Training set → model learns from this</li>
+        <li>Validation set → used to choose between models (tune hyperparameters)</li>
+        <li>Test set → used ONCE at the end for final performance estimate</li>
+        <li>Typical split: 60% train / 20% validation / 20% test</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Using test set for model selection</strong> — the most common and most damaging mistake</li>
+        <li>⚠️ <strong>Ignoring the train-val gap</strong> — reporting only test accuracy without diagnosing</li>
+        <li>⚠️ <strong>Adding complexity to fix underfitting when the features are bad</strong> — no model can learn from uninformative features</li>
+        <li>⚠️ <strong>Assuming overfitting is always bad</strong> — slight overfitting is normal; massive overfitting is the problem</li>
+        <li>⚠️ <strong>Not enough data for three-way split</strong> — with 100 samples, 20% validation = only 20 points (noisy estimate)</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>Learning curves require training the model multiple times → can be slow for complex models</li>
+        <li>For large datasets, subsample for learning curve computation</li>
+        <li>The diagnostic concepts (train vs val error) are O(1) to compute once you have predictions</li>
+        <li>Three-way split wastes data — cross-validation (Project 15) is more data-efficient</li>
+        <li>These diagnostic principles apply to models of ANY complexity — from linear to deep learning</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Learning curves are visual and intuitive — even non-technical people can see the gap</li>
+        <li>✅ "The model memorizes" vs "the model generalizes" is a clear explanation</li>
+        <li>✅ The bias-variance tradeoff provides a framework for ALL modeling decisions</li>
+        <li>✅ Stakeholders can understand: "we need more data" or "we need a simpler model"</li>
+        <li>⚠️ The tradeoff is conceptual — you can't directly measure bias and variance separately in practice</li>
+    </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import learning_curve
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# ─── Step 1: Generate data with a known nonlinear pattern ───
+np.random.seed(42)
+n = 100
+X = np.random.uniform(0, 10, n)
+# True function: y = sin(x) + 0.5x (nonlinear)
+y = np.sin(X) + 0.5 * X + np.random.normal(0, 0.5, n)
+
+# ─── Step 2: Three-way split ───
+X_train, y_train = X[:60], y[:60]
+X_val, y_val = X[60:80], y[60:80]
+X_test, y_test = X[80:], y[80:]
+print(f"Train: {len(X_train)} | Validation: {len(X_val)} | Test: {len(X_test)}")
+
+# ─── Step 3: Fit models of increasing complexity ───
+degrees = [1, 3, 10, 20]
+results = []
+
+print(f"\n=== Model Complexity Comparison ===")
+print(f"{'Degree':>8} {'Train RMSE':>12} {'Val RMSE':>12} {'Gap':>10} {'Diagnosis':>15}")
+print("-" * 60)
+
+for d in degrees:
+    # Create polynomial features
+    poly = PolynomialFeatures(degree=d, include_bias=False)
+    X_train_poly = poly.fit_transform(X_train.reshape(-1, 1))
+    X_val_poly = poly.transform(X_val.reshape(-1, 1))
+    X_test_poly = poly.transform(X_test.reshape(-1, 1))
+
+    # Fit
+    model = LinearRegression()
+    model.fit(X_train_poly, y_train)
+
+    # Evaluate
+    train_rmse = np.sqrt(mean_squared_error(y_train, model.predict(X_train_poly)))
+    val_rmse = np.sqrt(mean_squared_error(y_val, model.predict(X_val_poly)))
+    gap = val_rmse - train_rmse
+
+    # Diagnose
+    if train_rmse > 0.8:
+        diagnosis = "UNDERFITTING"
+    elif gap > 0.5:
+        diagnosis = "OVERFITTING"
+    else:
+        diagnosis = "GOOD FIT"
+
+    results.append({
+        'degree': d, 'train_rmse': train_rmse,
+        'val_rmse': val_rmse, 'diagnosis': diagnosis
+    })
+
+    print(f"{d:>8} {train_rmse:>12.4f} {val_rmse:>12.4f} {gap:>+10.4f} {diagnosis:>15}")
+
+# ─── Step 4: Pick the best model using validation set ───
+best = min(results, key=lambda r: r['val_rmse'])
+print(f"\n✅ Best model: degree={best['degree']} (Val RMSE={best['val_rmse']:.4f})")
+
+# Final evaluation on test set (ONCE)
+poly_best = PolynomialFeatures(degree=best['degree'], include_bias=False)
+X_train_best = poly_best.fit_transform(X_train.reshape(-1, 1))
+X_test_best = poly_best.transform(X_test.reshape(-1, 1))
+model_best = LinearRegression().fit(X_train_best, y_train)
+test_rmse = np.sqrt(mean_squared_error(y_test, model_best.predict(X_test_best)))
+print(f"   Test RMSE (final, unbiased): {test_rmse:.4f}")
+
+# ─── Step 5: Learning Curves ───
+from sklearn.pipeline import make_pipeline
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+for idx, d in enumerate(degrees):
+    ax = axes[idx // 2][idx % 2]
+    pipe = make_pipeline(PolynomialFeatures(d, include_bias=False), LinearRegression())
+
+    train_sizes, train_scores, val_scores = learning_curve(
+        pipe, X.reshape(-1, 1), y,
+        train_sizes=np.linspace(0.2, 1.0, 8),
+        cv=5, scoring='neg_mean_squared_error'
+    )
+
+    train_rmse_lc = np.sqrt(-train_scores.mean(axis=1))
+    val_rmse_lc = np.sqrt(-val_scores.mean(axis=1))
+
+    ax.plot(train_sizes, train_rmse_lc, 'o-', color='#58a6ff', label='Training')
+    ax.plot(train_sizes, val_rmse_lc, 'o-', color='#f0883e', label='Validation')
+    ax.set_xlabel('Training Set Size')
+    ax.set_ylabel('RMSE')
+    ax.set_title(f'Degree {d} — {results[idx]["diagnosis"]}')
+    ax.legend()
+    ax.grid(True, alpha=0.2)
+    ax.set_ylim(0, 3)
+
+plt.tight_layout()
+plt.savefig('project_08_learning_curves.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ Learning curves saved as project_08_learning_curves.png")
+
+# ─── Step 6: Visual comparison of fits ───
+fig2, axes2 = plt.subplots(1, 4, figsize=(16, 4))
+x_plot = np.linspace(0, 10, 200)
+
+for idx, d in enumerate(degrees):
+    ax = axes2[idx]
+    poly = PolynomialFeatures(degree=d, include_bias=False)
+    X_tr_p = poly.fit_transform(X_train.reshape(-1, 1))
+    m = LinearRegression().fit(X_tr_p, y_train)
+
+    y_plot = m.predict(poly.transform(x_plot.reshape(-1, 1)))
+
+    ax.scatter(X_train, y_train, color='#58a6ff', alpha=0.4, s=15)
+    ax.plot(x_plot, y_plot, color='#3fb950', linewidth=2)
+    ax.set_title(f'Degree {d}\n{results[idx]["diagnosis"]}')
+    ax.set_ylim(-2, 8)
+    ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_08_fits.png', dpi=100, bbox_inches='tight')
+print(f"✅ Model fits saved as project_08_fits.png")
+</code></pre>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Overfitting = low training error, high validation error (model memorizes)</li>
+        <li>Underfitting = high training error, high validation error (model too simple)</li>
+        <li>The bias-variance tradeoff is the central tension in ALL of machine learning</li>
+        <li>Learning curves diagnose whether you need more data or more complexity</li>
+        <li>Use validation set for model selection, test set for final evaluation ONLY</li>
+    </ul>
+
+    <h3>🔗 Bridge to Phase 2</h3>
+    <ul>
+        <li>Phase 1 is complete — you now have the foundation: regression, classification, evaluation, and diagnostics</li>
+        <li>Phase 2 starts with <strong>Multiple Regression</strong> (Project 9) — what happens when you have MANY features?</li>
+        <li>New challenges emerge: multicollinearity, feature selection, and the curse of dimensionality</li>
+        <li>Every concept from Phase 1 carries forward — train/test split, residuals, confusion matrix, bias-variance</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_07.html">← Project 7: Predicting Employee Salary Band</a>
+    <a href="project_09.html">Project 9: Multiple Regression →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

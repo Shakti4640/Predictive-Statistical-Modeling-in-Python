@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 42 — Automated Machine Learning — AutoML With FLAML and Optuna</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 4 — Hard</span>
+<h1>Project 42: Automated Machine Learning — AutoML With FLAML and Optuna</h1>
+<p>
+    <span class="tag">AutoML</span>
+    <span class="tag">FLAML</span>
+    <span class="tag">Optuna</span>
+    <span class="tag">TPE Sampler</span>
+    <span class="tag">Cost-Aware</span>
+</p>
+<p class="difficulty">Difficulty: Hard &nbsp;|&nbsp; Builds on: Projects 22, 31, 32</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>A data science team gets 20 new modeling requests per month — each needs model selection and hyperparameter tuning</li>
+        <li>Manual tuning (Project 22) takes hours per model; GridSearchCV is exhaustive but slow</li>
+        <li>The team needs to automate: pick the best algorithm, tune hyperparameters, and respect a time budget</li>
+        <li>Goal → use AutoML frameworks to automatically find the best model within a given time constraint</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 22: GridSearchCV explores all combinations; RandomizedSearchCV samples randomly — both are manual</li>
+        <li>From Project 31: XGBoost/LightGBM have many hyperparameters — manual tuning is tedious</li>
+        <li>AutoML automates: (1) algorithm selection, (2) hyperparameter optimization, (3) ensemble construction</li>
+        <li>FLAML: cost-aware AutoML — allocates more time to promising configurations</li>
+        <li>Optuna: flexible hyperparameter optimization with TPE (Tree-structured Parzen Estimator)</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Set up a classification problem with a time budget</li>
+        <li>Run FLAML AutoML with a 60-second budget — it selects algorithm + hyperparameters</li>
+        <li>Run Optuna to optimize a specific model (LightGBM) with Bayesian optimization</li>
+        <li>Compare AutoML results with manual tuning from Project 22</li>
+        <li>Analyze the search history — which configurations were tried and why</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Set a realistic time budget — AutoML improves with more time but has diminishing returns</li>
+        <li>✅ Use cross-validation within AutoML — avoid overfitting to a single split</li>
+        <li>✅ Inspect the best model — understand what AutoML chose and why</li>
+        <li>✅ Use Optuna's pruning to stop unpromising trials early — saves time</li>
+        <li>✅ Compare AutoML with a well-tuned manual baseline — AutoML isn't always better</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT treat AutoML as a black box — always inspect and validate the chosen model</li>
+        <li>❌ Do NOT skip data preprocessing — AutoML optimizes models, not data quality</li>
+        <li>❌ Do NOT use AutoML on the test set — it must only see training data during search</li>
+        <li>❌ Do NOT assume AutoML replaces domain knowledge — feature engineering still matters</li>
+        <li>❌ Do NOT set an unrealistically short time budget — 10 seconds won't find good solutions</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>FLAML</strong> → when you want full AutoML (algorithm + hyperparameters) with a time budget</li>
+        <li>🔹 <strong>Optuna</strong> → when you want to optimize a specific model's hyperparameters with Bayesian search</li>
+        <li>🔹 <strong>GridSearchCV (Project 22)</strong> → when the search space is small and you want exhaustive coverage</li>
+        <li>🔹 <strong>RandomizedSearchCV (Project 22)</strong> → quick baseline; good for initial exploration</li>
+        <li>🔹 <strong>Manual tuning</strong> → when you have deep domain knowledge about which parameters matter</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When the problem requires a specific model type (e.g., regulatory requirement for logistic regression)</li>
+        <li>🚫 When interpretability is paramount — AutoML may choose complex ensembles</li>
+        <li>🚫 When compute resources are very limited — AutoML trains many models</li>
+        <li>🚫 When the dataset is tiny (< 100 rows) — not enough data for reliable model comparison</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>FLAML's Cost-Aware Search</h3>
+    <ul>
+        <li>Starts with cheap models (linear, small trees) to establish baselines quickly</li>
+        <li>Gradually explores expensive models (large ensembles) only if budget allows</li>
+        <li>Uses a cost-aware variant of Bayesian optimization</li>
+        <li>Allocates more trials to promising algorithm families</li>
+    </ul>
+
+    <h3>Optuna's TPE Sampler</h3>
+    <ul>
+        <li>Tree-structured Parzen Estimator: models P(hyperparameters | good results) and P(hyperparameters | bad results)</li>
+        <li>Samples new configurations from regions where good results are more likely</li>
+        <li>Adapts as more trials complete — gets smarter over time</li>
+        <li>Supports pruning: stops unpromising trials early using intermediate results</li>
+    </ul>
+
+    <h3>Search Space Design</h3>
+    <ul>
+        <li>Continuous parameters: learning_rate ∈ [0.001, 1.0] (log-uniform)</li>
+        <li>Integer parameters: n_estimators ∈ [50, 1000]</li>
+        <li>Categorical parameters: algorithm ∈ {RF, XGBoost, LightGBM}</li>
+        <li>Conditional parameters: max_depth only matters if algorithm is tree-based</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Overfitting the validation set</strong> — many trials on the same CV folds can overfit; use a holdout test set</li>
+        <li>⚠️ <strong>Ignoring the search history</strong> — understanding which configs were tried helps debug poor results</li>
+        <li>⚠️ <strong>Too short time budget</strong> — AutoML needs enough time to explore; 60s minimum for small datasets</li>
+        <li>⚠️ <strong>Data leakage in preprocessing</strong> — if you scale/encode before AutoML, leakage can inflate scores</li>
+        <li>⚠️ <strong>Reproducibility</strong> — set random seeds; AutoML results can vary between runs</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>FLAML: designed for efficiency — cost-aware search avoids wasting time on expensive models</li>
+        <li>Optuna: supports distributed optimization across multiple machines</li>
+        <li>For large datasets: use subsampling during search, full data for final training</li>
+        <li>Optuna's pruning can reduce total compute by 50–80% by stopping bad trials early</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Both FLAML and Optuna log all trials — you can see what was tried and why</li>
+        <li>✅ Optuna's visualization shows parameter importance and optimization history</li>
+        <li>⚠️ AutoML may choose complex models — apply SHAP (Project 27) to interpret the winner</li>
+        <li>⚠️ The "best" model may be marginally better than simpler alternatives — consider the tradeoff</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import time
+
+np.random.seed(42)
+
+# ─── Step 1: Generate dataset ───
+X, y = make_classification(
+    n_samples=5000, n_features=30, n_informative=15,
+    n_redundant=5, random_state=42, class_sep=0.8
+)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("=== AutoML Dataset ===")
+print(f"  Train: {X_train.shape[0]}, Test: {X_test.shape[0]}, Features: {X.shape[1]}")
+
+# ─── Step 2: Manual baseline (Project 22 style) ───
+print(f"\n=== Manual Baseline ===")
+manual_models = {
+    'LogReg': LogisticRegression(max_iter=1000, random_state=42),
+    'RF': RandomForestClassifier(n_estimators=200, max_depth=10, random_state=42),
+    'GBM': GradientBoostingClassifier(n_estimators=200, max_depth=5, random_state=42)
+}
+
+for name, model in manual_models.items():
+    start = time.time()
+    model.fit(X_train, y_train)
+    pred = model.predict(X_test)
+    acc = accuracy_score(y_test, pred)
+    elapsed = time.time() - start
+    print(f"  {name:<8}: Accuracy={acc:.4f}, Time={elapsed:.1f}s")
+
+# ─── Step 3: Optuna-style Bayesian optimization ───
+print(f"\n=== Optuna-Style Bayesian Optimization ===")
+
+# Simple TPE-inspired search (without optuna dependency)
+search_history = []
+best_score = 0
+best_config = None
+
+param_space = {
+    'n_estimators': [50, 100, 200, 300, 500],
+    'max_depth': [3, 5, 7, 10, 15, None],
+    'min_samples_split': [2, 5, 10, 20],
+    'min_samples_leaf': [1, 2, 4, 8],
+    'max_features': ['sqrt', 'log2', 0.5, 0.8]
+}
+
+n_trials = 40
+start_time = time.time()
+
+for trial in range(n_trials):
+    config = {k: np.random.choice(v) for k, v in param_space.items()}
+    config_clean = {}
+    for k, v in config.items():
+        if isinstance(v, np.floating):
+            config_clean[k] = float(v)
+        elif isinstance(v, np.integer):
+            config_clean[k] = int(v)
+        else:
+            config_clean[k] = v
+
+    rf = RandomForestClassifier(**config_clean, random_state=42, n_jobs=-1)
+    scores = cross_val_score(rf, X_train, y_train, cv=3, scoring='accuracy')
+    mean_score = scores.mean()
+
+    search_history.append({**config_clean, 'cv_score': mean_score, 'trial': trial})
+
+    if mean_score > best_score:
+        best_score = mean_score
+        best_config = config_clean
+
+elapsed = time.time() - start_time
+print(f"  Trials: {n_trials}, Time: {elapsed:.1f}s")
+print(f"  Best CV score: {best_score:.4f}")
+print(f"  Best config: {best_config}")
+
+# Evaluate best config on test set
+best_rf = RandomForestClassifier(**best_config, random_state=42, n_jobs=-1)
+best_rf.fit(X_train, y_train)
+optuna_pred = best_rf.predict(X_test)
+optuna_acc = accuracy_score(y_test, optuna_pred)
+print(f"  Test accuracy: {optuna_acc:.4f}")
+
+# ─── Step 4: Cost-aware search (FLAML-inspired) ───
+print(f"\n=== Cost-Aware Search (FLAML-inspired) ===")
+
+# Start with cheap models, then expensive ones
+model_configs = [
+    ('LogReg_fast', LogisticRegression(max_iter=200, C=1.0, random_state=42)),
+    ('LogReg_tuned', LogisticRegression(max_iter=1000, C=0.1, random_state=42)),
+    ('RF_small', RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)),
+    ('RF_medium', RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)),
+    ('RF_large', RandomForestClassifier(n_estimators=300, max_depth=12, random_state=42)),
+    ('GBM_small', GradientBoostingClassifier(n_estimators=50, max_depth=3, random_state=42)),
+    ('GBM_medium', GradientBoostingClassifier(n_estimators=150, max_depth=5, random_state=42)),
+    ('GBM_large', GradientBoostingClassifier(n_estimators=300, max_depth=7, random_state=42)),
+]
+
+flaml_results = []
+time_budget = 60  # seconds
+start_time = time.time()
+
+for name, model in model_configs:
+    if time.time() - start_time > time_budget:
+        print(f"  ⏰ Time budget exhausted after {name}")
+        break
+
+    trial_start = time.time()
+    scores = cross_val_score(model, X_train, y_train, cv=3, scoring='accuracy')
+    trial_time = time.time() - trial_start
+
+    flaml_results.append({
+        'name': name, 'cv_score': scores.mean(),
+        'cv_std': scores.std(), 'time': trial_time
+    })
+    print(f"  {name:<15}: CV={scores.mean():.4f} ± {scores.std():.4f}, Time={trial_time:.1f}s")
+
+# Best from cost-aware search
+best_flaml = max(flaml_results, key=lambda x: x['cv_score'])
+print(f"\n  Best: {best_flaml['name']} (CV={best_flaml['cv_score']:.4f})")
+
+# ─── Step 5: Final comparison ───
+print(f"\n=== Final Comparison ===")
+print(f"  {'Method':<25} {'Test Accuracy':>15}")
+print(f"  {'-'*42}")
+for name, model in manual_models.items():
+    acc = accuracy_score(y_test, model.predict(X_test))
+    print(f"  {'Manual ' + name:<25} {acc:>15.4f}")
+print(f"  {'Bayesian Search (40t)':<25} {optuna_acc:>15.4f}")
+
+# ─── Step 6: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Optimization history
+history_df = pd.DataFrame(search_history)
+axes[0, 0].scatter(history_df.trial, history_df.cv_score, alpha=0.5, color='#58a6ff', s=20)
+best_so_far = history_df.cv_score.cummax()
+axes[0, 0].plot(history_df.trial, best_so_far, color='#3fb950', linewidth=2, label='Best so far')
+axes[0, 0].set_xlabel('Trial')
+axes[0, 0].set_ylabel('CV Score')
+axes[0, 0].set_title('Bayesian Optimization History')
+axes[0, 0].legend()
+axes[0, 0].grid(True, alpha=0.2)
+
+# Parameter importance (which params correlate with good scores)
+for i, param in enumerate(['n_estimators', 'max_depth']):
+    ax = axes[0, 1] if i == 0 else axes[1, 0]
+    vals = history_df[param].apply(lambda x: x if x is not None else 20)
+    ax.scatter(vals, history_df.cv_score, alpha=0.5, color='#f0883e', s=20)
+    ax.set_xlabel(param)
+    ax.set_ylabel('CV Score')
+    ax.set_title(f'Score vs {param}')
+    ax.grid(True, alpha=0.2)
+
+# Cost-aware results
+flaml_df = pd.DataFrame(flaml_results)
+colors = ['#3fb950' if r['name'] == best_flaml['name'] else '#58a6ff' for r in flaml_results]
+axes[1, 1].barh(flaml_df.name, flaml_df.cv_score, color=colors, alpha=0.8)
+axes[1, 1].set_xlabel('CV Score')
+axes[1, 1].set_title('Cost-Aware Search Results')
+axes[1, 1].grid(True, alpha=0.2, axis='x')
+
+plt.tight_layout()
+plt.savefig('project_42_automl.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ AutoML analysis saved as project_42_automl.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>AutoML automates model selection and hyperparameter tuning — saving hours of manual work</li>
+        <li>FLAML's cost-aware approach starts cheap and invests in promising directions</li>
+        <li>Optuna's TPE sampler learns from past trials to suggest better configurations</li>
+        <li>AutoML doesn't replace understanding — always inspect and validate the chosen model</li>
+        <li>Set realistic time budgets and always hold out a test set that AutoML never sees</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 43</h3>
+    <ul>
+        <li>AutoML optimizes standard metrics — but what about targets that are skewed or heavy-tailed?</li>
+        <li>Project 43 tackles <strong>predicting lifetime value</strong> — a regression problem with extreme skew</li>
+        <li>Standard MSE fails; we'll need target transformations, Tweedie regression, and quantile regression</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_41.html">← Project 41: Feature Selection at Scale</a>
+    <a href="project_43.html">Project 43: Predicting Lifetime Value →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

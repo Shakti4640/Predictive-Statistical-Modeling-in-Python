@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 49 — Multi-Step Time Series Forecasting With LSTM</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 49: Multi-Step Time Series Forecasting With LSTM</h1>
+<p>
+    <span class="tag">LSTM</span>
+    <span class="tag">Sequence Modeling</span>
+    <span class="tag">Sliding Window</span>
+    <span class="tag">Multi-Step</span>
+    <span class="tag">Teacher Forcing</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 47, 26, 44</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>An energy company needs to forecast hourly electricity demand 24 hours ahead for grid management</li>
+        <li>ARIMA (Project 26) handles single-step forecasting well but multi-step forecasts degrade rapidly</li>
+        <li>Prophet (Project 44) captures seasonality but doesn't learn complex temporal dependencies</li>
+        <li>The demand pattern has daily cycles, weekly patterns, and nonlinear interactions with temperature</li>
+        <li>Goal → build an LSTM-style recurrent model from scratch that captures long-range temporal dependencies for multi-step forecasting</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 47: we know how to build neural networks with backpropagation — now we add recurrence</li>
+        <li>From Project 26: ARIMA uses autoregressive terms — LSTM generalizes this with learned memory</li>
+        <li>From Project 44: time series have seasonality and trends — LSTM can learn these patterns from data</li>
+        <li>Standard RNNs suffer from vanishing gradients — LSTM adds gates to control information flow</li>
+        <li>We'll implement LSTM gates from scratch and use sliding windows for multi-step prediction</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Generate synthetic hourly electricity demand with daily/weekly seasonality and noise</li>
+        <li>Create sliding window sequences: use past 48 hours to predict next 24 hours</li>
+        <li>Implement LSTM cell with forget, input, and output gates using numpy</li>
+        <li>Train with backpropagation through time (BPTT) and gradient clipping</li>
+        <li>Compare multi-step forecasting: LSTM vs. simple RNN vs. linear baseline</li>
+        <li>Visualize gate activations, forecasts, and error accumulation over forecast horizon</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Normalize time series before feeding to LSTM — neural nets need scaled inputs</li>
+        <li>✅ Use sliding windows with proper train/test split — never leak future data into training</li>
+        <li>✅ Clip gradients during BPTT — prevents exploding gradients in long sequences</li>
+        <li>✅ Monitor validation loss for early stopping — LSTMs overfit easily on small time series</li>
+        <li>✅ Evaluate at each forecast horizon separately — error at h=1 vs h=24 tells different stories</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT shuffle time series data — temporal order must be preserved</li>
+        <li>❌ Do NOT use future values as features — this is data leakage in time series</li>
+        <li>❌ Do NOT ignore stationarity — LSTM works better on stationary or differenced series</li>
+        <li>❌ Do NOT use very long sequences without truncated BPTT — memory and gradient issues</li>
+        <li>❌ Do NOT compare LSTM on tiny datasets — it needs thousands of sequences to learn patterns</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>LSTM / Recurrent Models</strong> → long sequences, complex temporal dependencies, multi-step forecasting</li>
+        <li>🔹 <strong>ARIMA (Project 26)</strong> → short series, single-step, when stationarity assumptions hold</li>
+        <li>🔹 <strong>Prophet (Project 44)</strong> → business time series with strong seasonality, quick baseline</li>
+        <li>🔹 <strong>XGBoost with lag features</strong> → tabular approach to time series, often competitive with LSTM</li>
+        <li>🔹 <strong>Transformers</strong> → very long sequences where attention beats recurrence</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 Short time series (< 500 points) — not enough data to learn temporal patterns</li>
+        <li>🚫 Simple seasonal patterns — ARIMA or Prophet are simpler and often sufficient</li>
+        <li>🚫 When interpretability is required — LSTM gates are hard to explain to stakeholders</li>
+        <li>🚫 Real-time inference with strict latency — recurrent computation is sequential, not parallelizable</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>LSTM Cell — The Four Gates</h3>
+    <ul>
+        <li>Forget gate: f_t = σ(W_f · [h_{t-1}, x_t] + b_f) — what to forget from cell state</li>
+        <li>Input gate: i_t = σ(W_i · [h_{t-1}, x_t] + b_i) — what new info to store</li>
+        <li>Candidate: c̃_t = tanh(W_c · [h_{t-1}, x_t] + b_c) — new candidate values</li>
+        <li>Cell update: c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t — selective memory update</li>
+        <li>Output gate: o_t = σ(W_o · [h_{t-1}, x_t] + b_o) — what to output</li>
+        <li>Hidden state: h_t = o_t ⊙ tanh(c_t) — filtered cell state as output</li>
+    </ul>
+
+    <h3>Why Gates Solve Vanishing Gradients</h3>
+    <ul>
+        <li>Standard RNN: gradient flows through repeated matrix multiplications → vanishes or explodes</li>
+        <li>LSTM cell state: gradient flows through additions (c_t = f_t ⊙ c_{t-1} + ...) → gradient highway</li>
+        <li>Forget gate near 1.0: information persists indefinitely — long-range memory</li>
+        <li>Forget gate near 0.0: old information is discarded — the network can "reset"</li>
+    </ul>
+
+    <h3>Sliding Window for Multi-Step Forecasting</h3>
+    <ul>
+        <li>Input: [x_{t-L+1}, ..., x_t] — L past observations (lookback window)</li>
+        <li>Output: [x_{t+1}, ..., x_{t+H}] — H future values (forecast horizon)</li>
+        <li>Direct strategy: predict all H steps at once from the final hidden state</li>
+        <li>Recursive strategy: predict one step, feed it back as input for the next</li>
+        <li>Teacher forcing (training): use true values as inputs; at inference, use predictions</li>
+    </ul>
+
+    <h3>Backpropagation Through Time (BPTT)</h3>
+    <ul>
+        <li>Unroll the LSTM across time steps — treat as a very deep feedforward network</li>
+        <li>Compute gradients for each time step and sum them</li>
+        <li>Truncated BPTT: limit backprop to k steps — trades accuracy for memory/speed</li>
+        <li>Gradient clipping: if ||g|| > threshold, scale g down — prevents exploding gradients</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Error accumulation</strong> — recursive multi-step forecasts compound errors; direct strategy avoids this</li>
+        <li>⚠️ <strong>Exposure bias</strong> — teacher forcing uses true inputs during training but predictions during inference</li>
+        <li>⚠️ <strong>Overfitting on small series</strong> — LSTM has many parameters; use dropout and regularization</li>
+        <li>⚠️ <strong>Wrong lookback window</strong> — too short misses patterns; too long adds noise and slows training</li>
+        <li>⚠️ <strong>Not differencing non-stationary data</strong> — LSTM struggles with trends; difference or normalize first</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>LSTM is sequential — can't parallelize across time steps (unlike Transformers)</li>
+        <li>Training: O(T × h²) per sample where T=sequence length, h=hidden size</li>
+        <li>For very long sequences (>1000 steps): use truncated BPTT or switch to Transformers</li>
+        <li>Mini-batch training: process multiple sequences in parallel — essential for speed</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Gate activations reveal what the LSTM remembers and forgets — visualize forget gate over time</li>
+        <li>✅ Cell state tracks long-term memory — plot it to see what information persists</li>
+        <li>⚠️ Individual weights are uninterpretable — use attention mechanisms on top for interpretability</li>
+        <li>⚠️ Multi-step forecasts are harder to explain — "why did you predict a spike at hour 18?"</li>
+        <li>✅ Forecast uncertainty can be estimated via dropout at inference (MC Dropout)</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Generate synthetic hourly electricity demand ───
+n_hours = 24 * 365  # 1 year of hourly data
+hours = np.arange(n_hours)
+
+# Daily pattern (peak at 2pm, low at 4am)
+daily = 50 * np.sin(2 * np.pi * (hours - 6) / 24)
+# Weekly pattern (lower on weekends)
+weekly = 20 * np.sin(2 * np.pi * hours / (24 * 7))
+# Annual trend
+trend = 10 * np.sin(2 * np.pi * hours / (24 * 365))
+# Base load + noise
+base = 500
+noise = np.random.normal(0, 15, n_hours)
+
+demand = base + daily + weekly + trend + noise
+demand = np.maximum(demand, 200)  # Floor at 200 MW
+
+print("=== Synthetic Electricity Demand Dataset ===")
+print(f"  Total hours: {n_hours}")
+print(f"  Days: {n_hours // 24}")
+print(f"  Demand range: [{demand.min():.0f}, {demand.max():.0f}] MW")
+print(f"  Mean demand: {demand.mean():.0f} MW")
+
+# ─── Step 2: Normalize and create sliding windows ───
+scaler = MinMaxScaler()
+demand_scaled = scaler.fit_transform(demand.reshape(-1, 1)).ravel()
+
+lookback = 48   # Use past 48 hours
+horizon = 24    # Predict next 24 hours
+
+def create_sequences(data, lookback, horizon):
+    X, y = [], []
+    for i in range(len(data) - lookback - horizon + 1):
+        X.append(data[i:i+lookback])
+        y.append(data[i+lookback:i+lookback+horizon])
+    return np.array(X), np.array(y)
+
+X_seq, y_seq = create_sequences(demand_scaled, lookback, horizon)
+
+# Time-based split (no shuffling!)
+split = int(0.8 * len(X_seq))
+X_train, X_test = X_seq[:split], X_seq[split:]
+y_train, y_test = y_seq[:split], y_seq[split:]
+
+print(f"\n=== Sliding Window Setup ===")
+print(f"  Lookback: {lookback} hours")
+print(f"  Forecast horizon: {horizon} hours")
+print(f"  Training sequences: {X_train.shape[0]}")
+print(f"  Test sequences: {X_test.shape[0]}")
+
+# ─── Step 3: LSTM cell from scratch ───
+class LSTMCell:
+    """Single LSTM cell implemented from scratch."""
+
+    def __init__(self, input_dim, hidden_dim):
+        self.hidden_dim = hidden_dim
+        scale = np.sqrt(2.0 / (input_dim + hidden_dim))
+
+        # Forget gate
+        self.Wf = np.random.randn(input_dim + hidden_dim, hidden_dim) * scale
+        self.bf = np.zeros(hidden_dim)
+        # Input gate
+        self.Wi = np.random.randn(input_dim + hidden_dim, hidden_dim) * scale
+        self.bi = np.zeros(hidden_dim)
+        # Candidate
+        self.Wc = np.random.randn(input_dim + hidden_dim, hidden_dim) * scale
+        self.bc = np.zeros(hidden_dim)
+        # Output gate
+        self.Wo = np.random.randn(input_dim + hidden_dim, hidden_dim) * scale
+        self.bo = np.zeros(hidden_dim)
+
+        # Initialize forget gate bias to 1 (remember by default)
+        self.bf = np.ones(hidden_dim)
+
+    def forward(self, x_t, h_prev, c_prev):
+        concat = np.concatenate([h_prev, x_t], axis=-1)
+
+        f_t = self._sigmoid(concat @ self.Wf + self.bf)
+        i_t = self._sigmoid(concat @ self.Wi + self.bi)
+        c_tilde = np.tanh(concat @ self.Wc + self.bc)
+        c_t = f_t * c_prev + i_t * c_tilde
+        o_t = self._sigmoid(concat @ self.Wo + self.bo)
+        h_t = o_t * np.tanh(c_t)
+
+        cache = (x_t, h_prev, c_prev, f_t, i_t, c_tilde, c_t, o_t, concat)
+        return h_t, c_t, cache
+
+    def _sigmoid(self, z):
+        z = np.clip(z, -500, 500)
+        return 1.0 / (1.0 + np.exp(-z))
+
+# ─── Step 4: LSTM-based forecasting model ───
+class LSTMForecaster:
+    """Multi-step forecaster using LSTM from scratch."""
+
+    def __init__(self, input_dim, hidden_dim, output_horizon, lr=0.001):
+        self.hidden_dim = hidden_dim
+        self.output_horizon = output_horizon
+        self.lr = lr
+        self.lstm = LSTMCell(input_dim, hidden_dim)
+
+        # Output projection: hidden state -> multi-step forecast
+        self.W_out = np.random.randn(hidden_dim, output_horizon) * np.sqrt(2.0/hidden_dim)
+        self.b_out = np.zeros(output_horizon)
+
+    def forward(self, X_batch):
+        """Process a batch of sequences. X_batch: (batch, seq_len)"""
+        batch_size, seq_len = X_batch.shape
+        h = np.zeros((batch_size, self.hidden_dim))
+        c = np.zeros((batch_size, self.hidden_dim))
+        caches = []
+
+        for t in range(seq_len):
+            x_t = X_batch[:, t:t+1]  # (batch, 1)
+            h, c, cache = self.lstm.forward(x_t, h, c)
+            caches.append(cache)
+
+        # Direct multi-step: predict all horizons from final hidden state
+        y_pred = h @ self.W_out + self.b_out  # (batch, horizon)
+        return y_pred, h, caches
+
+    def compute_loss(self, y_true, y_pred):
+        return np.mean((y_true - y_pred) ** 2)
+
+    def fit(self, X_train, y_train, epochs=50, batch_size=64, verbose=True):
+        n = X_train.shape[0]
+        losses = []
+
+        for epoch in range(epochs):
+            # Mini-batch training
+            indices = np.random.permutation(n)
+            epoch_loss = 0
+            n_batches = 0
+
+            for start in range(0, n, batch_size):
+                end = min(start + batch_size, n)
+                idx = indices[start:end]
+                X_batch = X_train[idx]
+                y_batch = y_train[idx]
+                bs = X_batch.shape[0]
+
+                # Forward
+                y_pred, h_final, caches = self.forward(X_batch)
+                loss = self.compute_loss(y_batch, y_pred)
+
+                # Backward through output layer
+                d_pred = 2 * (y_pred - y_batch) / (bs * self.output_horizon)
+                d_W_out = h_final.T @ d_pred
+                d_b_out = np.sum(d_pred, axis=0)
+                d_h = d_pred @ self.W_out.T
+
+                # Gradient clipping
+                grad_norm = np.sqrt(np.sum(d_W_out**2) + np.sum(d_h**2))
+                max_norm = 5.0
+                if grad_norm > max_norm:
+                    scale = max_norm / grad_norm
+                    d_W_out *= scale
+                    d_h *= scale
+
+                # Update output weights
+                self.W_out -= self.lr * d_W_out
+                self.b_out -= self.lr * d_b_out
+
+                # Simplified BPTT for last few steps
+                d_c = np.zeros_like(d_h)
+                for t in reversed(range(max(0, len(caches)-5), len(caches))):
+                    cache = caches[t]
+                    x_t, h_prev, c_prev, f_t, i_t, c_tilde, c_t, o_t, concat = cache
+
+                    d_o = d_h * np.tanh(c_t)
+                    d_c += d_h * o_t * (1 - np.tanh(c_t)**2)
+
+                    d_f = d_c * c_prev * f_t * (1 - f_t)
+                    d_i = d_c * c_tilde * i_t * (1 - i_t)
+                    d_c_tilde = d_c * i_t * (1 - c_tilde**2)
+                    d_o_gate = d_o * o_t * (1 - o_t)
+
+                    # Update LSTM weights (accumulated)
+                    for d_gate, W, b in [
+                        (d_f, self.lstm.Wf, self.lstm.bf),
+                        (d_i, self.lstm.Wi, self.lstm.bi),
+                        (d_c_tilde, self.lstm.Wc, self.lstm.bc),
+                        (d_o_gate, self.lstm.Wo, self.lstm.bo)
+                    ]:
+                        dW = concat.T @ d_gate / bs
+                        db = np.mean(d_gate, axis=0)
+                        # Clip
+                        dW = np.clip(dW, -1.0, 1.0)
+                        W -= self.lr * dW
+                        b -= self.lr * db
+
+                    d_c = d_c * f_t
+                    d_concat = (d_f @ self.lstm.Wf.T + d_i @ self.lstm.Wi.T +
+                                d_c_tilde @ self.lstm.Wc.T + d_o_gate @ self.lstm.Wo.T)
+                    d_h = d_concat[:, :self.hidden_dim]
+
+                epoch_loss += loss
+                n_batches += 1
+
+            avg_loss = epoch_loss / n_batches
+            losses.append(avg_loss)
+
+            if verbose and (epoch + 1) % 10 == 0:
+                print(f"  Epoch {epoch+1:4d}: MSE={avg_loss:.6f}")
+
+        return losses
+
+    def predict(self, X):
+        y_pred, _, _ = self.forward(X)
+        return y_pred
+
+# ─── Step 5: Simple RNN baseline ───
+class SimpleRNNForecaster:
+    """Vanilla RNN for comparison — no gates."""
+
+    def __init__(self, input_dim, hidden_dim, output_horizon, lr=0.001):
+        self.hidden_dim = hidden_dim
+        self.lr = lr
+        scale = np.sqrt(2.0 / (input_dim + hidden_dim))
+        self.Wh = np.random.randn(input_dim + hidden_dim, hidden_dim) * scale
+        self.bh = np.zeros(hidden_dim)
+        self.W_out = np.random.randn(hidden_dim, output_horizon) * np.sqrt(2.0/hidden_dim)
+        self.b_out = np.zeros(output_horizon)
+
+    def forward(self, X_batch):
+        batch_size, seq_len = X_batch.shape
+        h = np.zeros((batch_size, self.hidden_dim))
+        for t in range(seq_len):
+            x_t = X_batch[:, t:t+1]
+            concat = np.concatenate([h, x_t], axis=-1)
+            h = np.tanh(concat @ self.Wh + self.bh)
+        return h @ self.W_out + self.b_out
+
+    def fit(self, X_train, y_train, epochs=50, batch_size=64, verbose=True):
+        n = X_train.shape[0]
+        losses = []
+        for epoch in range(epochs):
+            indices = np.random.permutation(n)
+            epoch_loss = 0
+            n_batches = 0
+            for start in range(0, n, batch_size):
+                end = min(start + batch_size, n)
+                idx = indices[start:end]
+                X_b, y_b = X_train[idx], y_train[idx]
+                bs = X_b.shape[0]
+                y_pred = self.forward(X_b)
+                loss = np.mean((y_b - y_pred)**2)
+                d_pred = 2*(y_pred - y_b)/(bs * y_b.shape[1])
+                # Simple output update only
+                h = np.zeros((bs, self.hidden_dim))
+                for t in range(X_b.shape[1]):
+                    x_t = X_b[:, t:t+1]
+                    concat = np.concatenate([h, x_t], axis=-1)
+                    h = np.tanh(concat @ self.Wh + self.bh)
+                self.W_out -= self.lr * (h.T @ d_pred)
+                self.b_out -= self.lr * np.sum(d_pred, axis=0)
+                epoch_loss += loss
+                n_batches += 1
+            losses.append(epoch_loss / n_batches)
+            if verbose and (epoch+1) % 10 == 0:
+                print(f"  Epoch {epoch+1:4d}: MSE={losses[-1]:.6f}")
+        return losses
+
+    def predict(self, X):
+        return self.forward(X)
+
+# ─── Step 6: Linear baseline ───
+class LinearForecaster:
+    """Simple linear model: flatten lookback -> predict horizon."""
+
+    def __init__(self, lookback, horizon):
+        self.W = np.random.randn(lookback, horizon) * 0.01
+        self.b = np.zeros(horizon)
+
+    def fit(self, X, y, epochs=100, lr=0.001):
+        for _ in range(epochs):
+            pred = X @ self.W + self.b
+            grad = 2 * X.T @ (pred - y) / X.shape[0]
+            self.W -= lr * np.clip(grad, -1, 1)
+            self.b -= lr * np.mean(2*(pred - y), axis=0)
+
+    def predict(self, X):
+        return X @ self.W + self.b
+
+# ─── Step 7: Train all models ───
+print(f"\n=== Training LSTM Forecaster ===")
+print(f"  Architecture: 1 input → 32 hidden (LSTM) → {horizon} output")
+lstm_model = LSTMForecaster(input_dim=1, hidden_dim=32, output_horizon=horizon, lr=0.005)
+lstm_losses = lstm_model.fit(X_train, y_train, epochs=50, batch_size=128)
+
+print(f"\n=== Training Simple RNN ===")
+rnn_model = SimpleRNNForecaster(input_dim=1, hidden_dim=32, output_horizon=horizon, lr=0.005)
+rnn_losses = rnn_model.fit(X_train, y_train, epochs=50, batch_size=128)
+
+print(f"\n=== Training Linear Baseline ===")
+linear_model = LinearForecaster(lookback, horizon)
+linear_model.fit(X_train, y_train, epochs=200, lr=0.01)
+
+# ─── Step 8: Evaluate ───
+y_pred_lstm = lstm_model.predict(X_test)
+y_pred_rnn = rnn_model.predict(X_test)
+y_pred_linear = linear_model.predict(X_test)
+
+# Inverse transform for interpretable metrics
+def inverse_scale(arr):
+    return scaler.inverse_transform(arr.reshape(-1, 1)).ravel().reshape(arr.shape)
+
+y_test_real = inverse_scale(y_test)
+y_pred_lstm_real = inverse_scale(y_pred_lstm)
+y_pred_rnn_real = inverse_scale(y_pred_rnn)
+y_pred_linear_real = inverse_scale(y_pred_linear)
+
+print(f"\n=== Overall Forecast Accuracy ===")
+print(f"  {'Model':<20} {'RMSE (MW)':>12} {'MAE (MW)':>12}")
+print(f"  {'-'*46}")
+for name, pred in [('LSTM', y_pred_lstm_real), ('Simple RNN', y_pred_rnn_real), ('Linear', y_pred_linear_real)]:
+    rmse = np.sqrt(mean_squared_error(y_test_real.ravel(), pred.ravel()))
+    mae = mean_absolute_error(y_test_real.ravel(), pred.ravel())
+    print(f"  {name:<20} {rmse:>12.2f} {mae:>12.2f}")
+
+# Per-horizon error analysis
+print(f"\n=== Error by Forecast Horizon ===")
+print(f"  {'Hour':>6} {'LSTM RMSE':>12} {'RNN RMSE':>12} {'Linear RMSE':>12}")
+print(f"  {'-'*44}")
+for h in [1, 6, 12, 18, 24]:
+    idx = h - 1
+    lstm_rmse = np.sqrt(np.mean((y_test_real[:, idx] - y_pred_lstm_real[:, idx])**2))
+    rnn_rmse = np.sqrt(np.mean((y_test_real[:, idx] - y_pred_rnn_real[:, idx])**2))
+    lin_rmse = np.sqrt(np.mean((y_test_real[:, idx] - y_pred_linear_real[:, idx])**2))
+    print(f"  h={h:>3} {lstm_rmse:>12.2f} {rnn_rmse:>12.2f} {lin_rmse:>12.2f}")
+
+# ─── Step 9: Gate activation analysis ───
+print(f"\n=== LSTM Gate Analysis (sample sequence) ===")
+sample_seq = X_test[0:1]
+h = np.zeros((1, lstm_model.hidden_dim))
+c = np.zeros((1, lstm_model.hidden_dim))
+forget_gates = []
+input_gates = []
+cell_states = []
+
+for t in range(sample_seq.shape[1]):
+    x_t = sample_seq[:, t:t+1]
+    h, c, cache = lstm_model.lstm.forward(x_t, h, c)
+    _, _, _, f_t, i_t, _, c_t, _, _ = cache
+    forget_gates.append(np.mean(f_t))
+    input_gates.append(np.mean(i_t))
+    cell_states.append(np.mean(np.abs(c_t)))
+
+print(f"  Avg forget gate: {np.mean(forget_gates):.4f} (1=remember all, 0=forget all)")
+print(f"  Avg input gate: {np.mean(input_gates):.4f} (1=write all, 0=write nothing)")
+print(f"  Cell state magnitude: {np.mean(cell_states):.4f}")
+
+# ─── Step 10: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Training loss comparison
+ax = axes[0, 0]
+ax.plot(lstm_losses, color='#58a6ff', linewidth=2, label='LSTM')
+ax.plot(rnn_losses, color='#f0883e', linewidth=2, label='Simple RNN')
+ax.set_xlabel('Epoch')
+ax.set_ylabel('MSE Loss')
+ax.set_title('Training Loss Comparison')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Sample forecast
+ax = axes[0, 1]
+sample_idx = 50
+actual = y_test_real[sample_idx]
+pred_lstm = y_pred_lstm_real[sample_idx]
+pred_rnn = y_pred_rnn_real[sample_idx]
+pred_lin = y_pred_linear_real[sample_idx]
+hours_ahead = np.arange(1, horizon + 1)
+ax.plot(hours_ahead, actual, 'o-', color='white', linewidth=2, markersize=4, label='Actual')
+ax.plot(hours_ahead, pred_lstm, 's-', color='#58a6ff', linewidth=1.5, markersize=3, label='LSTM')
+ax.plot(hours_ahead, pred_rnn, '^-', color='#f0883e', linewidth=1.5, markersize=3, label='RNN')
+ax.plot(hours_ahead, pred_lin, 'v-', color='#3fb950', linewidth=1.5, markersize=3, label='Linear')
+ax.set_xlabel('Hours Ahead')
+ax.set_ylabel('Demand (MW)')
+ax.set_title('24-Hour Forecast (Sample)')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Error by horizon
+ax = axes[1, 0]
+lstm_horizon_rmse = [np.sqrt(np.mean((y_test_real[:, h] - y_pred_lstm_real[:, h])**2)) for h in range(horizon)]
+rnn_horizon_rmse = [np.sqrt(np.mean((y_test_real[:, h] - y_pred_rnn_real[:, h])**2)) for h in range(horizon)]
+lin_horizon_rmse = [np.sqrt(np.mean((y_test_real[:, h] - y_pred_linear_real[:, h])**2)) for h in range(horizon)]
+ax.plot(range(1, horizon+1), lstm_horizon_rmse, color='#58a6ff', linewidth=2, label='LSTM')
+ax.plot(range(1, horizon+1), rnn_horizon_rmse, color='#f0883e', linewidth=2, label='RNN')
+ax.plot(range(1, horizon+1), lin_horizon_rmse, color='#3fb950', linewidth=2, label='Linear')
+ax.set_xlabel('Forecast Horizon (hours)')
+ax.set_ylabel('RMSE (MW)')
+ax.set_title('Error Accumulation Over Forecast Horizon')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+# Gate activations
+ax = axes[1, 1]
+time_steps = range(len(forget_gates))
+ax.plot(time_steps, forget_gates, color='#58a6ff', linewidth=1.5, label='Forget Gate')
+ax.plot(time_steps, input_gates, color='#f0883e', linewidth=1.5, label='Input Gate')
+ax.plot(time_steps, cell_states, color='#3fb950', linewidth=1.5, label='|Cell State|')
+ax.set_xlabel('Time Step')
+ax.set_ylabel('Activation')
+ax.set_title('LSTM Gate Activations (Sample Sequence)')
+ax.legend()
+ax.grid(True, alpha=0.2)
+
+plt.tight_layout()
+plt.savefig('project_49_lstm_forecasting.png', dpi=100, bbox_inches='tight')
+print(f"\n✅ LSTM forecasting analysis saved as project_49_lstm_forecasting.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>LSTMs solve the vanishing gradient problem with gates — forget, input, and output gates control information flow</li>
+        <li>The cell state acts as a gradient highway — information can persist across hundreds of time steps</li>
+        <li>Multi-step forecasting is harder than single-step — errors accumulate with each horizon step</li>
+        <li>Direct strategy (predict all steps at once) avoids error accumulation but may miss temporal dependencies in the forecast</li>
+        <li>For tabular time series, XGBoost with lag features is often competitive — LSTM shines on long, complex sequences</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 50</h3>
+    <ul>
+        <li>We've built neural networks (Project 47), attention models (Project 48), and recurrent models (Project 49)</li>
+        <li>Project 50 asks: can we transfer knowledge from one dataset to another using <strong>entity embeddings</strong>?</li>
+        <li>When you have a small dataset for a new task but a large dataset from a related task, transfer learning helps</li>
+        <li>We'll learn categorical embeddings on a large dataset and fine-tune them on a small one</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_48.html">← Project 48: TabNet on Tabular Data</a>
+    <a href="project_50.html">Project 50: Transfer Learning on Tabular Data →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>

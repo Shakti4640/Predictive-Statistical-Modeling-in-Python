@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 58 — Reinforcement Learning for Pricing — Bandit Algorithms</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --heading: #58a6ff; --accent: #f0883e; --green: #3fb950; --red: #f85149; --purple: #bc8cff; --code-bg: #0d1117; --link: #58a6ff; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
+        h1 { color: var(--heading); font-size: 1.9rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+        h2 { color: var(--accent); font-size: 1.4rem; margin: 2rem 0 1rem 0; }
+        h3 { color: var(--purple); font-size: 1.15rem; margin: 1.5rem 0 0.5rem 0; }
+        .phase-badge { display: inline-block; background: #1f6feb33; color: var(--heading); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin-bottom: 1rem; }
+        .difficulty { color: var(--green); font-weight: bold; }
+        .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
+        ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        li { margin: 0.4rem 0; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; margin: 1rem 0; }
+        code { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; color: #e6edf3; }
+        .do { border-left: 4px solid var(--green); }
+        .dont { border-left: 4px solid var(--red); }
+        .when { border-left: 4px solid var(--purple); }
+        .mechanics { border-left: 4px solid var(--heading); }
+        .pitfall { border-left: 4px solid var(--accent); }
+        .bridge { background: linear-gradient(135deg, #1f6feb22, #bc8cff22); border: 1px solid var(--purple); border-radius: 8px; padding: 1.5rem; margin: 2rem 0; }
+        .nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+        .nav a { color: var(--link); text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .tag { display: inline-block; background: #30363d; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin: 0.1rem; }
+    </style>
+</head>
+<body>
+
+<span class="phase-badge">📋 Phase 5 — Very Hard</span>
+<h1>Project 58: Reinforcement Learning for Pricing — Bandit Algorithms</h1>
+<p>
+    <span class="tag">Multi-Armed Bandit</span>
+    <span class="tag">Epsilon-Greedy</span>
+    <span class="tag">UCB</span>
+    <span class="tag">Thompson Sampling</span>
+    <span class="tag">Regret</span>
+</p>
+<p class="difficulty">Difficulty: Very Hard &nbsp;|&nbsp; Builds on: Projects 30, 52</p>
+
+<h2>1 · Hypothetical Problem</h2>
+<div class="section">
+    <ul>
+        <li>An e-commerce company sells a premium headphone product and is considering 5 price points: $49, $59, $69, $79, $89</li>
+        <li>Each price has an unknown purchase probability — lower prices convert more but generate less revenue per sale</li>
+        <li>The company wants to find the optimal price (maximizing expected revenue) as quickly as possible</li>
+        <li>Every customer shown a suboptimal price represents lost revenue — this is the <strong>exploration-exploitation tradeoff</strong></li>
+        <li>Traditional A/B testing (Project 30) would split traffic equally across all 5 prices for weeks — too much wasted revenue</li>
+        <li>Goal → use bandit algorithms to adaptively allocate traffic, converging on the best price while minimizing cumulative regret</li>
+    </ul>
+</div>
+
+<h2>2 · How to Approach It</h2>
+<div class="section">
+    <ol>
+        <li>From Project 30: A/B testing gives statistical rigor but wastes traffic on clearly inferior options</li>
+        <li>From Project 52: deployed models need to make real-time decisions — bandits are online learning algorithms</li>
+        <li>The multi-armed bandit problem: K "arms" (prices), each with unknown reward distribution; pull one arm per customer</li>
+        <li>Exploration: try different prices to learn their conversion rates</li>
+        <li>Exploitation: show the price you currently believe is best to maximize revenue</li>
+        <li>The goal is to minimize <strong>cumulative regret</strong> — the total revenue lost compared to always showing the optimal price</li>
+    </ol>
+</div>
+
+<h2>3 · How Can We Solve It</h2>
+<div class="section">
+    <ol>
+        <li>Define 5 price points with hidden purchase probabilities (the "true" conversion rates we're trying to learn)</li>
+        <li>Implement epsilon-greedy: explore randomly with probability ε, exploit the best-known arm otherwise</li>
+        <li>Implement UCB1 (Upper Confidence Bound): choose the arm with the highest optimistic estimate</li>
+        <li>Implement Thompson Sampling: sample from posterior distributions and choose the arm with the highest sample</li>
+        <li>Simulate 10,000 customers arriving one at a time</li>
+        <li>Track cumulative regret, arm selection frequency, and estimated vs. true conversion rates</li>
+        <li>Compare all three algorithms against random selection and the oracle (always optimal) baseline</li>
+    </ol>
+</div>
+
+<h2>4 · What Should Do</h2>
+<div class="section do">
+    <ul>
+        <li>✅ Define regret clearly — regret = (optimal reward) - (actual reward) per step; cumulative regret should grow sublinearly</li>
+        <li>✅ Use decaying epsilon for epsilon-greedy — explore more early, exploit more later</li>
+        <li>✅ Track confidence intervals — UCB and Thompson Sampling naturally provide uncertainty estimates</li>
+        <li>✅ Run multiple simulations — bandit algorithms are stochastic; average over 100+ runs for reliable comparisons</li>
+        <li>✅ Consider the revenue metric, not just conversion rate — a $89 price with 10% conversion beats $49 with 15% conversion</li>
+        <li>✅ Use Thompson Sampling as the default — it's empirically the best general-purpose bandit algorithm</li>
+    </ul>
+</div>
+
+<h2>5 · What Should NOT Do</h2>
+<div class="section dont">
+    <ul>
+        <li>❌ Do NOT use pure exploration (random) — you'll waste half your traffic on bad prices</li>
+        <li>❌ Do NOT use pure exploitation (greedy) — you'll lock onto the first price that looks good and miss the true optimum</li>
+        <li>❌ Do NOT set epsilon too high — ε=0.5 means 50% random exploration; ε=0.05–0.1 is typical</li>
+        <li>❌ Do NOT ignore non-stationarity — if conversion rates change over time, use sliding window or discounted estimates</li>
+        <li>❌ Do NOT compare algorithms on a single run — variance is high; use averaged regret curves</li>
+        <li>❌ Do NOT forget the business context — a 1% regret reduction on 1M customers is $100K+ in revenue</li>
+    </ul>
+</div>
+
+<h2>6 · When to Use What</h2>
+<div class="section when">
+    <ul>
+        <li>🔹 <strong>Epsilon-Greedy</strong> → simplest to implement; good baseline; works well with decaying ε</li>
+        <li>🔹 <strong>UCB1</strong> → deterministic; good theoretical guarantees; explores systematically based on uncertainty</li>
+        <li>🔹 <strong>Thompson Sampling</strong> → Bayesian; best empirical performance; naturally balances exploration/exploitation</li>
+        <li>🔹 <strong>A/B Testing (Project 30)</strong> → when you need statistical significance and can afford fixed exploration</li>
+        <li>🔹 <strong>Contextual Bandits</strong> → when the optimal arm depends on user features (personalized pricing)</li>
+        <li>🔹 <strong>Full RL (Q-learning, Policy Gradient)</strong> → when actions affect future states (not just immediate rewards)</li>
+    </ul>
+</div>
+
+<h2>7 · When NOT to Use</h2>
+<div class="section when">
+    <ul>
+        <li>🚫 When you need strict statistical significance — bandits don't provide p-values like A/B tests</li>
+        <li>🚫 When the action space is continuous — standard bandits need discrete arms; use Bayesian optimization instead</li>
+        <li>🚫 When rewards are delayed by days/weeks — bandits assume immediate feedback</li>
+        <li>🚫 When there are only 2 options — a simple A/B test is clearer and provides confidence intervals</li>
+        <li>🚫 When the environment is adversarial — standard bandits assume stochastic rewards; use EXP3 for adversarial settings</li>
+    </ul>
+</div>
+
+<h2>8 · How It Only Works — Internal Mechanics</h2>
+<div class="section mechanics">
+    <h3>The Multi-Armed Bandit Problem</h3>
+    <ul>
+        <li>K arms (actions), each with an unknown reward distribution</li>
+        <li>At each time step t, the agent picks one arm and observes a reward</li>
+        <li>Goal: maximize cumulative reward over T rounds (equivalently, minimize cumulative regret)</li>
+        <li>Regret at time t: r_t = μ* - μ_{a_t} where μ* is the best arm's true mean</li>
+        <li>Cumulative regret R_T = Σ r_t — should grow sublinearly (O(√T) or O(log T)) for good algorithms</li>
+    </ul>
+
+    <h3>Epsilon-Greedy</h3>
+    <ul>
+        <li>With probability ε: pick a random arm (explore)</li>
+        <li>With probability 1-ε: pick the arm with the highest estimated reward (exploit)</li>
+        <li>Estimated reward Q(a) = (sum of rewards from arm a) / (number of times arm a was pulled)</li>
+        <li>Decaying ε: ε_t = ε₀ / t — explore less as you learn more</li>
+        <li>Regret: O(ε × T) for fixed ε — linear regret; O(log T) with proper decay</li>
+    </ul>
+
+    <h3>UCB1 (Upper Confidence Bound)</h3>
+    <ul>
+        <li>Pick the arm that maximizes: Q(a) + c × √(ln(t) / N(a))</li>
+        <li>Q(a) = estimated mean reward; N(a) = number of times arm a was pulled</li>
+        <li>The second term is the "exploration bonus" — large for rarely-pulled arms</li>
+        <li>Deterministic — no randomness in arm selection (unlike ε-greedy)</li>
+        <li>Regret: O(K × log T) — logarithmic, near-optimal</li>
+    </ul>
+
+    <h3>Thompson Sampling</h3>
+    <ul>
+        <li>Maintain a posterior distribution for each arm's reward (Beta distribution for binary rewards)</li>
+        <li>At each step: sample θ_a ~ Beta(α_a, β_a) for each arm; pick the arm with highest sample</li>
+        <li>Update: if reward=1, α_a += 1; if reward=0, β_a += 1 (Bayesian update from Project 30)</li>
+        <li>Naturally balances exploration and exploitation — uncertain arms get sampled more</li>
+        <li>Regret: O(K × log T) — matches UCB1 theoretically, often better empirically</li>
+    </ul>
+
+    <h3>Revenue vs. Conversion</h3>
+    <ul>
+        <li>Reward = price × conversion (not just conversion rate)</li>
+        <li>A $89 price with 10% conversion yields $8.90 expected revenue per visitor</li>
+        <li>A $49 price with 15% conversion yields $7.35 — lower despite higher conversion</li>
+        <li>The bandit optimizes expected revenue, not conversion rate</li>
+    </ul>
+</div>
+
+<h2>9 · Common Pitfalls and Failure Modes</h2>
+<div class="section pitfall">
+    <ul>
+        <li>⚠️ <strong>Fixed epsilon</strong> — never decaying ε means you explore forever; 10% of traffic always wasted</li>
+        <li>⚠️ <strong>Cold start</strong> — all algorithms need initial exploration; the first 50-100 customers see random prices</li>
+        <li>⚠️ <strong>Non-stationarity</strong> — if conversion rates change over time (seasonality), standard bandits don't adapt</li>
+        <li>⚠️ <strong>Delayed rewards</strong> — if you don't know if a customer purchased until days later, the feedback loop breaks</li>
+        <li>⚠️ <strong>Evaluating on a single run</strong> — bandits are stochastic; one run can be misleading; average over 100+ simulations</li>
+        <li>⚠️ <strong>Ignoring context</strong> — if different customer segments have different optimal prices, standard bandits miss this</li>
+    </ul>
+</div>
+
+<h2>10 · Scalability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>All three algorithms are O(K) per step — trivial computation even with 100 arms</li>
+        <li>Thompson Sampling requires sampling from Beta distributions — microseconds per sample</li>
+        <li>UCB1 requires computing log and sqrt — negligible overhead</li>
+        <li>Memory: O(K) — just store counts and sum of rewards per arm</li>
+        <li>For contextual bandits (personalized pricing), complexity grows with feature dimensionality</li>
+        <li>Real-time serving: all algorithms can make decisions in &lt; 1ms — suitable for web traffic</li>
+    </ul>
+</div>
+
+<h2>11 · Interpretability Considerations</h2>
+<div class="section">
+    <ul>
+        <li>✅ Thompson Sampling posterior distributions show exactly how confident you are about each price</li>
+        <li>✅ UCB confidence bounds are intuitive — "we're 95% sure this price converts between 8% and 14%"</li>
+        <li>✅ Arm selection frequency shows the algorithm's "preference" — easy to explain to stakeholders</li>
+        <li>✅ Cumulative regret quantifies the cost of learning — "we lost $X while finding the optimal price"</li>
+        <li>⚠️ Epsilon-greedy is the easiest to explain — "we show the best price 90% of the time and experiment 10%"</li>
+        <li>⚠️ Thompson Sampling's Bayesian mechanics are harder to explain to non-technical stakeholders</li>
+    </ul>
+</div>
+
+<h2>12 · Complete Working Code</h2>
+<pre><code>import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# ─── Step 1: Define the pricing problem ───
+prices = np.array([49, 59, 69, 79, 89])
+# True conversion rates (unknown to the algorithms)
+true_conversion = np.array([0.18, 0.14, 0.11, 0.08, 0.05])
+# Expected revenue per visitor = price × conversion
+true_revenue = prices * true_conversion
+optimal_arm = np.argmax(true_revenue)
+optimal_revenue = true_revenue[optimal_arm]
+
+print("=== Pricing Problem Setup ===")
+print(f"  {'Price':>6} {'Conv Rate':>10} {'Exp Revenue':>12}")
+for i in range(len(prices)):
+    marker = " ← OPTIMAL" if i == optimal_arm else ""
+    print(f"  ${prices[i]:>5} {true_conversion[i]:>10.1%} ${true_revenue[i]:>10.2f}{marker}")
+
+K = len(prices)
+T = 10000  # number of customers
+n_simulations = 200
+
+# ─── Step 2: Implement bandit algorithms ───
+def simulate_reward(arm):
+    """Simulate a customer: returns revenue (price if purchased, 0 otherwise)."""
+    purchased = np.random.random() &lt; true_conversion[arm]
+    return prices[arm] if purchased else 0
+
+def run_epsilon_greedy(T, epsilon=0.1, decay=True):
+    Q = np.zeros(K)
+    N = np.zeros(K)
+    rewards = np.zeros(T)
+    arms_chosen = np.zeros(T, dtype=int)
+
+    for t in range(T):
+        eps = epsilon / (1 + t * 0.001) if decay else epsilon
+        if np.random.random() &lt; eps or t &lt; K:
+            arm = t % K if t &lt; K else np.random.randint(K)
+        else:
+            arm = np.argmax(Q)
+
+        reward = simulate_reward(arm)
+        N[arm] += 1
+        Q[arm] += (reward - Q[arm]) / N[arm]
+        rewards[t] = reward
+        arms_chosen[t] = arm
+
+    return rewards, arms_chosen, Q
+
+def run_ucb1(T, c=2.0):
+    Q = np.zeros(K)
+    N = np.zeros(K)
+    rewards = np.zeros(T)
+    arms_chosen = np.zeros(T, dtype=int)
+
+    for t in range(T):
+        if t &lt; K:
+            arm = t
+        else:
+            ucb_values = Q + c * np.sqrt(np.log(t) / (N + 1e-8))
+            arm = np.argmax(ucb_values)
+
+        reward = simulate_reward(arm)
+        N[arm] += 1
+        Q[arm] += (reward - Q[arm]) / N[arm]
+        rewards[t] = reward
+        arms_chosen[t] = arm
+
+    return rewards, arms_chosen, Q
+
+def run_thompson_sampling(T):
+    alpha = np.ones(K)
+    beta_param = np.ones(K)
+    rewards = np.zeros(T)
+    arms_chosen = np.zeros(T, dtype=int)
+
+    for t in range(T):
+        samples = np.array([
+            prices[a] * np.random.beta(alpha[a], beta_param[a])
+            for a in range(K)
+        ])
+        arm = np.argmax(samples)
+
+        reward = simulate_reward(arm)
+        purchased = reward &gt; 0
+        if purchased:
+            alpha[arm] += 1
+        else:
+            beta_param[arm] += 1
+
+        rewards[t] = reward
+        arms_chosen[t] = arm
+
+    return rewards, arms_chosen, alpha / (alpha + beta_param)
+
+def run_random(T):
+    rewards = np.zeros(T)
+    arms_chosen = np.zeros(T, dtype=int)
+    for t in range(T):
+        arm = np.random.randint(K)
+        rewards[t] = simulate_reward(arm)
+        arms_chosen[t] = arm
+    return rewards, arms_chosen, None
+
+# ─── Step 3: Run simulations ───
+algorithms = {
+    'Epsilon-Greedy': run_epsilon_greedy,
+    'UCB1': run_ucb1,
+    'Thompson Sampling': run_thompson_sampling,
+    'Random': run_random
+}
+
+all_regrets = {name: np.zeros((n_simulations, T)) for name in algorithms}
+all_arms = {name: np.zeros((n_simulations, T), dtype=int) for name in algorithms}
+
+print(f"\n=== Running {n_simulations} simulations × {T} customers ===")
+for name, algo in algorithms.items():
+    for sim in range(n_simulations):
+        np.random.seed(sim * 100 + hash(name) % 1000)
+        rewards, arms, _ = algo(T)
+        regret = optimal_revenue - rewards
+        all_regrets[name][sim] = np.cumsum(regret)
+        all_arms[name][sim] = arms
+    mean_final_regret = all_regrets[name][:, -1].mean()
+    print(f"  {name:&lt;20}: Mean cumulative regret = ${mean_final_regret:.0f}")
+
+# ─── Step 4: Detailed single-run analysis ───
+np.random.seed(42)
+print(f"\n=== Single Run Analysis (Thompson Sampling) ===")
+ts_rewards, ts_arms, ts_estimates = run_thompson_sampling(T)
+
+print(f"  Arm selection frequency:")
+for i in range(K):
+    count = (ts_arms == i).sum()
+    print(f"    ${prices[i]}: {count:>5} times ({count/T:.1%}), "
+          f"Est conv: {ts_estimates[i]:.3f}, True: {true_conversion[i]:.3f}")
+
+total_revenue = ts_rewards.sum()
+optimal_total = optimal_revenue * T
+print(f"\n  Total revenue: ${total_revenue:,.0f}")
+print(f"  Optimal revenue: ${optimal_total:,.0f}")
+print(f"  Revenue captured: {total_revenue/optimal_total:.1%}")
+
+# ─── Step 5: Visualization ───
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Cumulative regret comparison
+ax = axes[0, 0]
+colors_alg = {'Epsilon-Greedy': '#f0883e', 'UCB1': '#58a6ff',
+              'Thompson Sampling': '#3fb950', 'Random': '#f85149'}
+for name in algorithms:
+    mean_regret = all_regrets[name].mean(axis=0)
+    ax.plot(mean_regret, color=colors_alg[name], linewidth=2, label=name)
+ax.set_xlabel('Customers')
+ax.set_ylabel('Cumulative Regret ($)')
+ax.set_title('Cumulative Regret Comparison')
+ax.legend(fontsize=9)
+ax.grid(True, alpha=0.2)
+
+# Arm selection over time (Thompson Sampling)
+ax = axes[0, 1]
+window = 200
+for i in range(K):
+    freq = np.convolve((ts_arms == i).astype(float),
+                       np.ones(window)/window, mode='valid')
+    ax.plot(freq, label=f'${prices[i]}', linewidth=1.5)
+ax.set_xlabel('Customer')
+ax.set_ylabel('Selection Frequency (rolling)')
+ax.set_title('Thompson Sampling — Arm Selection Over Time')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2)
+
+# Final regret distribution
+ax = axes[1, 0]
+final_regrets = {name: all_regrets[name][:, -1] for name in algorithms}
+bp = ax.boxplot([final_regrets[n] for n in algorithms],
+                labels=list(algorithms.keys()), patch_artist=True)
+for patch, name in zip(bp['boxes'], algorithms):
+    patch.set_facecolor(colors_alg[name])
+    patch.set_alpha(0.7)
+ax.set_ylabel('Final Cumulative Regret ($)')
+ax.set_title(f'Regret Distribution ({n_simulations} simulations)')
+ax.grid(True, alpha=0.2, axis='y')
+ax.tick_params(axis='x', rotation=15)
+
+# Revenue per arm
+ax = axes[1, 1]
+x = np.arange(K)
+width = 0.35
+ax.bar(x - width/2, true_revenue, width, color='#58a6ff', alpha=0.8, label='True Revenue/Visit')
+ts_freq = np.array([(ts_arms == i).sum() / T for i in range(K)])
+ax.bar(x + width/2, ts_freq * 100, width, color='#3fb950', alpha=0.8, label='TS Selection % (×100)')
+ax.set_xticks(x)
+ax.set_xticklabels([f'${p}' for p in prices])
+ax.set_ylabel('Value')
+ax.set_title('True Revenue vs. Thompson Sampling Allocation')
+ax.legend(fontsize=8)
+ax.grid(True, alpha=0.2, axis='y')
+
+for a in axes.flat:
+    a.set_facecolor('#0d1117')
+    a.tick_params(colors='white')
+    a.xaxis.label.set_color('white')
+    a.yaxis.label.set_color('white')
+    a.title.set_color('white')
+fig.patch.set_facecolor('#0d1117')
+plt.tight_layout()
+plt.savefig('project_58_bandits.png', dpi=100, bbox_inches='tight', facecolor='#0d1117')
+print(f"\n✅ Bandit analysis saved as project_58_bandits.png")
+</code></pre>
+
+<h2>13 · Key Takeaway + Bridge to Next Project</h2>
+<div class="bridge">
+    <h3>Key Takeaway</h3>
+    <ul>
+        <li>Multi-armed bandits solve the exploration-exploitation tradeoff — learn the best option while minimizing wasted traffic</li>
+        <li>Thompson Sampling is the best general-purpose algorithm — Bayesian, adaptive, and empirically superior</li>
+        <li>UCB1 provides deterministic, theoretically grounded exploration based on confidence bounds</li>
+        <li>Epsilon-greedy is the simplest baseline — good for quick implementations with decaying ε</li>
+        <li>Always optimize for the business metric (revenue), not just conversion rate</li>
+        <li>Cumulative regret quantifies the cost of learning — sublinear growth means the algorithm is converging</li>
+    </ul>
+
+    <h3>🔗 Bridge to Project 59</h3>
+    <ul>
+        <li>We've built individual components: models, APIs, monitoring, online learning, and adaptive algorithms</li>
+        <li>Project 59 brings it all together into an <strong>end-to-end ML system</strong> — churn prediction with feature store + monitoring</li>
+        <li>We'll integrate feature stores (Feast), model registries (MLflow), training/serving skew detection, and full system design</li>
+        <li>This is the capstone of production ML — combining Projects 55, 56, 42, and 23 into a cohesive system</li>
+    </ul>
+</div>
+
+<div class="nav">
+    <a href="project_57.html">← Project 57: Federated Learning</a>
+    <a href="project_59.html">Project 59: End-to-End ML System →</a>
+</div>
+
+
+<div style="text-align:center; margin: 24px 0 8px;">
+  <a href="index.html" style="font-size:0.9rem; color:#555; text-decoration:none; border:1px solid #ccc; padding:6px 16px; border-radius:20px;">&#8593; Back to Table of Contents</a>
+</div>
+</body>
+</html>
